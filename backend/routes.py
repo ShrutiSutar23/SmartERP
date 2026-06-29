@@ -1,6 +1,8 @@
-from flask import request
+from flask import request, jsonify
 from extensions import db
-from models import Customer, Supplier, Item, Sale, Purchase
+from models import Customer, Supplier, Item, Sale, Purchase, User, Company
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+
 
 def register_routes(app):
 
@@ -69,32 +71,34 @@ def register_routes(app):
             </form>
         '''
 
-    @app.route("/add_supplier", methods=["GET", "POST"])
-    def add_supplier():
-        if request.method == "POST":
-            name = request.form["name"]
-            phone = request.form["phone"]
-            new_supplier = Supplier(name=name, phone=phone)
-            db.session.add(new_supplier)
-            db.session.commit()
-            return f"Supplier {name} added successfully!"
-        return '''
-            <form method="POST">
-                Name: <input type="text" name="name"><br>
-                Phone: <input type="text" name="phone"><br>
-                <input type="submit" value="Add Supplier">
-            </form>
-        '''
-
-    @app.route("/suppliers")
-    def view_suppliers():
-        all_suppliers = Supplier.query.all()
-        output = "<h2>All Suppliers</h2><ul>"
+    @app.route("/api/suppliers")
+    @jwt_required()
+    def api_suppliers():
+        company_id = request.args.get("company_id")
+        all_suppliers = Supplier.query.filter_by(company_id=company_id).all()
+        result = []
         for s in all_suppliers:
-            output += f"<li>{s.name} - {s.phone} - Due: ₹{s.balance_due}</li>"
-        output += "</ul>"
-        return output
+            result.append({
+                "id": s.id,
+                "name": s.name,
+                "phone": s.phone,
+                "balance_due": s.balance_due
+            })
+        return jsonify(result)
 
+    @app.route("/api/add_supplier", methods=["POST"])
+    @jwt_required()
+    def api_add_supplier():
+        data = request.get_json()
+        name = data.get("name")
+        phone = data.get("phone")
+        company_id = data.get("company_id")
+        new_supplier = Supplier(name=name, phone=phone, company_id=company_id)
+        db.session.add(new_supplier)
+        db.session.commit()
+        return jsonify({"message": f"Supplier {name} added successfully!"})
+
+    
     @app.route("/add_item", methods=["GET", "POST"])
     def add_item():
         if request.method == "POST":
@@ -206,3 +210,145 @@ def register_routes(app):
             output += f"<li>Purchase #{p.id}: Bought {p.quantity} x {item.name} from {supplier.name} — Total: ₹{p.total_amount}</li>"
         output += "</ul>"
         return output
+
+    # ---------------- AUTH ROUTES ----------------
+
+    @app.route("/api/signup", methods=["POST"])
+    def signup():
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return jsonify({"message": "Email already registered"}), 400
+
+        new_user = User(email=email)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"message": "Signup successful! Please log in."})
+
+    @app.route("/api/login", methods=["POST"])
+    def login():
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+
+        user = User.query.filter_by(email=email).first()
+
+        if user and user.check_password(password):
+            access_token = create_access_token(identity=str(user.id))
+            return jsonify({"message": "Login successful", "token": access_token})
+        else:
+            return jsonify({"message": "Invalid email or password"}), 401
+        
+    @app.route("/api/companies", methods=["GET"])
+    @jwt_required()
+    def get_companies():
+        user_id = get_jwt_identity()
+        companies = Company.query.filter_by(user_id=user_id).all()
+        result = []
+        for c in companies:
+            result.append({
+                "id": c.id,
+                "name": c.name,
+                "address": c.address,
+                "gst_number": c.gst_number,
+                "financial_year": c.financial_year,
+                "contact": c.contact,
+                "state": c.state
+            })
+        return jsonify(result)
+
+    @app.route("/api/companies", methods=["POST"])
+    @jwt_required()
+    def add_company():
+        user_id = get_jwt_identity()
+
+        existing_count = Company.query.filter_by(user_id=user_id).count()
+        if existing_count >= 5:
+            return jsonify({"message": "Maximum 5 companies allowed per account"}), 400
+
+        data = request.get_json()
+        new_company = Company(
+            user_id=user_id,
+            name=data.get("name"),
+            address=data.get("address"),
+            gst_number=data.get("gst_number"),
+            financial_year=data.get("financial_year"),
+            contact=data.get("contact"),
+            state=data.get("state")
+        )
+        db.session.add(new_company)
+        db.session.commit()
+        return jsonify({"message": f"Company {new_company.name} created successfully!"})
+
+    @app.route("/api/companies/<int:id>", methods=["DELETE"])
+    @jwt_required()
+    def delete_company(id):
+        user_id = get_jwt_identity()
+        company = Company.query.filter_by(id=id, user_id=user_id).first()
+        if company:
+            db.session.delete(company)
+            db.session.commit()
+            return jsonify({"message": "Company deleted"})
+        return jsonify({"message": "Company not found"}), 404
+
+    # ---------------- PROTECTED JSON API ROUTES ----------------
+
+    @app.route("/api/customers")
+    @jwt_required()
+    def api_customers():
+        company_id = request.args.get("company_id")
+        all_customers = Customer.query.filter_by(company_id=company_id).all()
+        result = []
+        for c in all_customers:
+            result.append({
+                "id": c.id,
+                "name": c.name,
+                "phone": c.phone,
+                "balance": c.balance
+            })
+        return jsonify(result)
+
+    @app.route("/api/add_customer", methods=["POST"])
+    @jwt_required()
+    def api_add_customer():
+        data = request.get_json()
+        name = data.get("name")
+        phone = data.get("phone")
+        company_id = data.get("company_id")
+        new_customer = Customer(name=name, phone=phone, company_id=company_id)
+        db.session.add(new_customer)
+        db.session.commit()
+        return jsonify({"message": f"Customer {name} added successfully!"})
+    
+    @app.route("/api/items")
+    @jwt_required()
+    def api_items():
+        company_id = request.args.get("company_id")
+        all_items = Item.query.filter_by(company_id=company_id).all()
+        result = []
+        for i in all_items:
+            result.append({
+                "id": i.id,
+                "name": i.name,
+                "price": i.price,
+                "quantity": i.quantity
+            })
+        return jsonify(result)
+
+    @app.route("/api/add_item", methods=["POST"])
+    @jwt_required()
+    def api_add_item():
+        data = request.get_json()
+        name = data.get("name")
+        price = data.get("price")
+        quantity = data.get("quantity")
+        company_id = data.get("company_id")
+        new_item = Item(name=name, price=float(price), quantity=int(quantity), company_id=company_id)
+        db.session.add(new_item)
+        db.session.commit()
+        return jsonify({"message": f"Item {name} added successfully!"})
