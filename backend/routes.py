@@ -352,3 +352,104 @@ def register_routes(app):
         db.session.add(new_item)
         db.session.commit()
         return jsonify({"message": f"Item {name} added successfully!"})
+    
+    @app.route("/api/sales_voucher", methods=["POST"])
+    @jwt_required()
+    def api_sales_voucher():
+        data = request.get_json()
+        company_id = data.get("company_id")
+        customer_id = int(data.get("customer_id"))
+        item_id = int(data.get("item_id"))
+        quantity = int(data.get("quantity"))
+
+        item = Item.query.get(item_id)
+        customer = Customer.query.get(customer_id)
+
+        if item.quantity < quantity:
+            return jsonify({"message": "Error: Not enough stock available!"}), 400
+
+        total_amount = item.price * quantity
+
+        item.quantity -= quantity
+        customer.balance += total_amount
+
+        new_sale = Sale(
+            company_id=company_id,
+            customer_id=customer_id,
+            item_id=item_id,
+            quantity=quantity,
+            total_amount=total_amount
+        )
+        db.session.add(new_sale)
+        db.session.commit()
+
+        return jsonify({
+            "message": f"Sale recorded! {quantity} x {item.name} sold to {customer.name}. Total: ₹{total_amount}"
+        })
+
+    @app.route("/api/sales_history")
+    @jwt_required()
+    def api_sales_history():
+        company_id = request.args.get("company_id")
+        all_sales = Sale.query.filter_by(company_id=company_id).all()
+        result = []
+        for s in all_sales:
+            customer = Customer.query.get(s.customer_id)
+            item = Item.query.get(s.item_id)
+            result.append({
+                "id": s.id,
+                "customer_name": customer.name if customer else "Unknown",
+                "item_name": item.name if item else "Unknown",
+                "quantity": s.quantity,
+                "total_amount": s.total_amount
+            })
+        return jsonify(result)
+    
+    @app.route("/api/purchase_voucher", methods=["POST"])
+    @jwt_required()
+    def api_purchase_voucher():
+        data = request.get_json()
+        company_id = data.get("company_id")
+        supplier_id = int(data.get("supplier_id"))
+        item_id = int(data.get("item_id"))
+        quantity = int(data.get("quantity"))
+
+        item = Item.query.get(item_id)
+        supplier = Supplier.query.get(supplier_id)
+
+        total_amount = item.price * quantity
+
+        item.quantity += quantity
+        supplier.balance_due += total_amount
+
+        new_purchase = Purchase(
+            company_id=company_id,
+            supplier_id=supplier_id,
+            item_id=item_id,
+            quantity=quantity,
+            total_amount=total_amount
+        )
+        db.session.add(new_purchase)
+        db.session.commit()
+
+        return jsonify({
+            "message": f"Purchase recorded! {quantity} x {item.name} bought from {supplier.name}. Total: ₹{total_amount}"
+        })
+
+    @app.route("/api/purchase_history")
+    @jwt_required()
+    def api_purchase_history():
+        company_id = request.args.get("company_id")
+        all_purchases = Purchase.query.filter_by(company_id=company_id).all()
+        result = []
+        for p in all_purchases:
+            supplier = Supplier.query.get(p.supplier_id)
+            item = Item.query.get(p.item_id)
+            result.append({
+                "id": p.id,
+                "supplier_name": supplier.name if supplier else "Unknown",
+                "item_name": item.name if item else "Unknown",
+                "quantity": p.quantity,
+                "total_amount": p.total_amount
+            })
+        return jsonify(result)
