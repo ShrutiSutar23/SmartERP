@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from extensions import db
-from models import Customer, Supplier, Item, Sale, Purchase, User, Company
+from models import Customer, Supplier, Item, Sale, Purchase, User, Company, Voucher
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 
@@ -405,51 +405,89 @@ def register_routes(app):
             })
         return jsonify(result)
     
-    @app.route("/api/purchase_voucher", methods=["POST"])
+    @app.route("/api/voucher", methods=["POST"])
     @jwt_required()
-    def api_purchase_voucher():
+    def add_voucher():
         data = request.get_json()
         company_id = data.get("company_id")
-        supplier_id = int(data.get("supplier_id"))
-        item_id = int(data.get("item_id"))
-        quantity = int(data.get("quantity"))
+        voucher_type = data.get("voucher_type")
+        description = data.get("description")
+        amount = float(data.get("amount"))
+        party_name = data.get("party_name")
 
-        item = Item.query.get(item_id)
-        supplier = Supplier.query.get(supplier_id)
-
-        total_amount = item.price * quantity
-
-        item.quantity += quantity
-        supplier.balance_due += total_amount
-
-        new_purchase = Purchase(
+        new_voucher = Voucher(
             company_id=company_id,
-            supplier_id=supplier_id,
-            item_id=item_id,
-            quantity=quantity,
-            total_amount=total_amount
+            voucher_type=voucher_type,
+            description=description,
+            amount=amount,
+            party_name=party_name
         )
-        db.session.add(new_purchase)
+        db.session.add(new_voucher)
         db.session.commit()
 
-        return jsonify({
-            "message": f"Purchase recorded! {quantity} x {item.name} bought from {supplier.name}. Total: ₹{total_amount}"
-        })
+        return jsonify({"message": f"{voucher_type} voucher of ₹{amount} recorded successfully!"})
 
-    @app.route("/api/purchase_history")
+    @app.route("/api/vouchers")
     @jwt_required()
-    def api_purchase_history():
+    def get_vouchers():
         company_id = request.args.get("company_id")
-        all_purchases = Purchase.query.filter_by(company_id=company_id).all()
+        voucher_type = request.args.get("type")
+
+        query = Voucher.query.filter_by(company_id=company_id)
+        if voucher_type:
+            query = query.filter_by(voucher_type=voucher_type)
+
+        all_vouchers = query.all()
         result = []
-        for p in all_purchases:
-            supplier = Supplier.query.get(p.supplier_id)
-            item = Item.query.get(p.item_id)
+        for v in all_vouchers:
             result.append({
-                "id": p.id,
-                "supplier_name": supplier.name if supplier else "Unknown",
-                "item_name": item.name if item else "Unknown",
-                "quantity": p.quantity,
-                "total_amount": p.total_amount
+                "id": v.id,
+                "voucher_type": v.voucher_type,
+                "description": v.description,
+                "amount": v.amount,
+                "party_name": v.party_name
             })
         return jsonify(result)
+    
+
+    @app.route("/api/dashboard")
+    @jwt_required()
+    def dashboard():
+        company_id = request.args.get("company_id")
+
+        total_sales = db.session.query(
+            db.func.sum(Sale.total_amount)
+        ).filter_by(company_id=company_id).scalar() or 0
+
+        total_purchases = db.session.query(
+            db.func.sum(Purchase.total_amount)
+        ).filter_by(company_id=company_id).scalar() or 0
+
+        total_customers = Customer.query.filter_by(company_id=company_id).count()
+        total_suppliers = Supplier.query.filter_by(company_id=company_id).count()
+
+        outstanding_balance = db.session.query(
+            db.func.sum(Customer.balance)
+        ).filter_by(company_id=company_id).scalar() or 0
+
+        total_payable = db.session.query(
+            db.func.sum(Supplier.balance_due)
+        ).filter_by(company_id=company_id).scalar() or 0
+
+        low_stock_items = Item.query.filter(
+            Item.company_id == company_id,
+            Item.quantity < 10
+        ).all()
+
+        low_stock = [{"name": i.name, "quantity": i.quantity} for i in low_stock_items]
+
+        return jsonify({
+            "total_sales": total_sales,
+            "total_purchases": total_purchases,
+            "total_customers": total_customers,
+            "total_suppliers": total_suppliers,
+            "outstanding_balance": outstanding_balance,
+            "total_payable": total_payable,
+            "low_stock_items": low_stock
+        })
+    

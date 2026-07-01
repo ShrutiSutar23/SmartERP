@@ -94,6 +94,7 @@ export default function SalesVoucher() {
         <a href="/items" className="text-blue-600 underline">Items</a>
         <a href="/sales" className="text-blue-600 underline">Sales Voucher</a>
         <a href="/purchases" className="text-blue-600 underline">Purchase Voucher</a>
+        <a href="/vouchers" className="text-blue-600 underline">Other Vouchers</a>
       </div>
 
       <form onSubmit={handleSubmit} className="mb-6 flex gap-2 flex-wrap">

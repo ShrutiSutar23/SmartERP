@@ -58,3 +58,11 @@ class Company(db.Model):
     financial_year = db.Column(db.String(20))
     contact = db.Column(db.String(15))
     state = db.Column(db.String(50))
+
+class Voucher(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    voucher_type = db.Column(db.String(20), nullable=False)
+    description = db.Column(db.String(255))
+    amount = db.Column(db.Float, nullable=False)
+    party_name = db.Column(db.String(100))

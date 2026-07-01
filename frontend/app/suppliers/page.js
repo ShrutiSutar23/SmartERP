@@ -77,8 +77,9 @@ export default function Suppliers() {
         <a href="/" className="text-blue-600 underline">Customers</a>
         <a href="/suppliers" className="text-blue-600 underline">Suppliers</a>
         <a href="/items" className="text-blue-600 underline">Items</a>
+        <a href="/vouchers" className="text-blue-600 underline">Other Vouchers</a>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="mb-6 flex gap-2">
         <input
           type="text"
