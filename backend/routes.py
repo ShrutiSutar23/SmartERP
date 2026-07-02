@@ -1,7 +1,8 @@
-from flask import request, jsonify
+from flask import request, jsonify, send_file
 from extensions import db
 from models import Customer, Supplier, Item, Sale, Purchase, User, Company, Voucher
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from invoice_generator import generate_invoice
 
 
 def register_routes(app):
@@ -71,34 +72,6 @@ def register_routes(app):
             </form>
         '''
 
-    @app.route("/api/suppliers")
-    @jwt_required()
-    def api_suppliers():
-        company_id = request.args.get("company_id")
-        all_suppliers = Supplier.query.filter_by(company_id=company_id).all()
-        result = []
-        for s in all_suppliers:
-            result.append({
-                "id": s.id,
-                "name": s.name,
-                "phone": s.phone,
-                "balance_due": s.balance_due
-            })
-        return jsonify(result)
-
-    @app.route("/api/add_supplier", methods=["POST"])
-    @jwt_required()
-    def api_add_supplier():
-        data = request.get_json()
-        name = data.get("name")
-        phone = data.get("phone")
-        company_id = data.get("company_id")
-        new_supplier = Supplier(name=name, phone=phone, company_id=company_id)
-        db.session.add(new_supplier)
-        db.session.commit()
-        return jsonify({"message": f"Supplier {name} added successfully!"})
-
-    
     @app.route("/add_item", methods=["GET", "POST"])
     def add_item():
         if request.method == "POST":
@@ -141,7 +114,7 @@ def register_routes(app):
             item.quantity -= quantity
             customer.balance += total_amount
             new_sale = Sale(customer_id=customer_id, item_id=item_id,
-                             quantity=quantity, total_amount=total_amount)
+                            quantity=quantity, total_amount=total_amount)
             db.session.add(new_sale)
             db.session.commit()
             return f"Sale recorded! {quantity} x {item.name} sold to {customer.name}. Total: ₹{total_amount}"
@@ -171,7 +144,7 @@ def register_routes(app):
             item.quantity += quantity
             supplier.balance_due += total_amount
             new_purchase = Purchase(supplier_id=supplier_id, item_id=item_id,
-                                     quantity=quantity, total_amount=total_amount)
+                                    quantity=quantity, total_amount=total_amount)
             db.session.add(new_purchase)
             db.session.commit()
             return f"Purchase recorded! {quantity} x {item.name} bought from {supplier.name}. Total: ₹{total_amount}"
@@ -243,7 +216,9 @@ def register_routes(app):
             return jsonify({"message": "Login successful", "token": access_token})
         else:
             return jsonify({"message": "Invalid email or password"}), 401
-        
+
+    # ---------------- COMPANY ROUTES ----------------
+
     @app.route("/api/companies", methods=["GET"])
     @jwt_required()
     def get_companies():
@@ -296,7 +271,7 @@ def register_routes(app):
             return jsonify({"message": "Company deleted"})
         return jsonify({"message": "Company not found"}), 404
 
-    # ---------------- PROTECTED JSON API ROUTES ----------------
+    # ---------------- CUSTOMER ROUTES ----------------
 
     @app.route("/api/customers")
     @jwt_required()
@@ -324,7 +299,38 @@ def register_routes(app):
         db.session.add(new_customer)
         db.session.commit()
         return jsonify({"message": f"Customer {name} added successfully!"})
-    
+
+    # ---------------- SUPPLIER ROUTES ----------------
+
+    @app.route("/api/suppliers")
+    @jwt_required()
+    def api_suppliers():
+        company_id = request.args.get("company_id")
+        all_suppliers = Supplier.query.filter_by(company_id=company_id).all()
+        result = []
+        for s in all_suppliers:
+            result.append({
+                "id": s.id,
+                "name": s.name,
+                "phone": s.phone,
+                "balance_due": s.balance_due
+            })
+        return jsonify(result)
+
+    @app.route("/api/add_supplier", methods=["POST"])
+    @jwt_required()
+    def api_add_supplier():
+        data = request.get_json()
+        name = data.get("name")
+        phone = data.get("phone")
+        company_id = data.get("company_id")
+        new_supplier = Supplier(name=name, phone=phone, company_id=company_id)
+        db.session.add(new_supplier)
+        db.session.commit()
+        return jsonify({"message": f"Supplier {name} added successfully!"})
+
+    # ---------------- ITEM ROUTES ----------------
+
     @app.route("/api/items")
     @jwt_required()
     def api_items():
@@ -352,7 +358,9 @@ def register_routes(app):
         db.session.add(new_item)
         db.session.commit()
         return jsonify({"message": f"Item {name} added successfully!"})
-    
+
+    # ---------------- SALES VOUCHER ROUTES ----------------
+
     @app.route("/api/sales_voucher", methods=["POST"])
     @jwt_required()
     def api_sales_voucher():
@@ -369,7 +377,6 @@ def register_routes(app):
             return jsonify({"message": "Error: Not enough stock available!"}), 400
 
         total_amount = item.price * quantity
-
         item.quantity -= quantity
         customer.balance += total_amount
 
@@ -404,7 +411,59 @@ def register_routes(app):
                 "total_amount": s.total_amount
             })
         return jsonify(result)
-    
+
+    # ---------------- PURCHASE VOUCHER ROUTES ----------------
+
+    @app.route("/api/purchase_voucher", methods=["POST"])
+    @jwt_required()
+    def api_purchase_voucher():
+        data = request.get_json()
+        company_id = data.get("company_id")
+        supplier_id = int(data.get("supplier_id"))
+        item_id = int(data.get("item_id"))
+        quantity = int(data.get("quantity"))
+
+        item = Item.query.get(item_id)
+        supplier = Supplier.query.get(supplier_id)
+
+        total_amount = item.price * quantity
+        item.quantity += quantity
+        supplier.balance_due += total_amount
+
+        new_purchase = Purchase(
+            company_id=company_id,
+            supplier_id=supplier_id,
+            item_id=item_id,
+            quantity=quantity,
+            total_amount=total_amount
+        )
+        db.session.add(new_purchase)
+        db.session.commit()
+
+        return jsonify({
+            "message": f"Purchase recorded! {quantity} x {item.name} bought from {supplier.name}. Total: ₹{total_amount}"
+        })
+
+    @app.route("/api/purchase_history")
+    @jwt_required()
+    def api_purchase_history():
+        company_id = request.args.get("company_id")
+        all_purchases = Purchase.query.filter_by(company_id=company_id).all()
+        result = []
+        for p in all_purchases:
+            supplier = Supplier.query.get(p.supplier_id)
+            item = Item.query.get(p.item_id)
+            result.append({
+                "id": p.id,
+                "supplier_name": supplier.name if supplier else "Unknown",
+                "item_name": item.name if item else "Unknown",
+                "quantity": p.quantity,
+                "total_amount": p.total_amount
+            })
+        return jsonify(result)
+
+    # ---------------- VOUCHER ROUTES ----------------
+
     @app.route("/api/voucher", methods=["POST"])
     @jwt_required()
     def add_voucher():
@@ -448,7 +507,8 @@ def register_routes(app):
                 "party_name": v.party_name
             })
         return jsonify(result)
-    
+
+    # ---------------- DASHBOARD ROUTE ----------------
 
     @app.route("/api/dashboard")
     @jwt_required()
@@ -490,4 +550,122 @@ def register_routes(app):
             "total_payable": total_payable,
             "low_stock_items": low_stock
         })
-    
+
+    # ---------------- REPORT ROUTES ----------------
+
+    @app.route("/api/reports/sales")
+    @jwt_required()
+    def sales_report():
+        company_id = request.args.get("company_id")
+        all_sales = Sale.query.filter_by(company_id=company_id).all()
+        result = []
+        total = 0
+        for s in all_sales:
+            customer = Customer.query.get(s.customer_id)
+            item = Item.query.get(s.item_id)
+            result.append({
+                "id": s.id,
+                "customer_name": customer.name if customer else "Unknown",
+                "item_name": item.name if item else "Unknown",
+                "quantity": s.quantity,
+                "total_amount": s.total_amount
+            })
+            total += s.total_amount
+        return jsonify({"sales": result, "total": total})
+
+    @app.route("/api/reports/purchases")
+    @jwt_required()
+    def purchase_report():
+        company_id = request.args.get("company_id")
+        all_purchases = Purchase.query.filter_by(company_id=company_id).all()
+        result = []
+        total = 0
+        for p in all_purchases:
+            supplier = Supplier.query.get(p.supplier_id)
+            item = Item.query.get(p.item_id)
+            result.append({
+                "id": p.id,
+                "supplier_name": supplier.name if supplier else "Unknown",
+                "item_name": item.name if item else "Unknown",
+                "quantity": p.quantity,
+                "total_amount": p.total_amount
+            })
+            total += p.total_amount
+        return jsonify({"purchases": result, "total": total})
+
+    @app.route("/api/reports/stock")
+    @jwt_required()
+    def stock_report():
+        company_id = request.args.get("company_id")
+        all_items = Item.query.filter_by(company_id=company_id).all()
+        result = []
+        for i in all_items:
+            result.append({
+                "id": i.id,
+                "name": i.name,
+                "price": i.price,
+                "quantity": i.quantity,
+                "stock_value": i.price * i.quantity,
+                "status": "Low Stock" if i.quantity < 10 else "OK"
+            })
+        total_stock_value = sum([i["stock_value"] for i in result])
+        return jsonify({"items": result, "total_stock_value": total_stock_value})
+
+    @app.route("/api/reports/customers")
+    @jwt_required()
+    def customer_report():
+        company_id = request.args.get("company_id")
+        all_customers = Customer.query.filter_by(company_id=company_id).all()
+        result = []
+        total_outstanding = 0
+        for c in all_customers:
+            result.append({
+                "id": c.id,
+                "name": c.name,
+                "phone": c.phone,
+                "balance": c.balance
+            })
+            total_outstanding += c.balance
+        return jsonify({
+            "customers": result,
+            "total_outstanding": total_outstanding
+        })
+
+    # ---------------- INVOICE ROUTE ----------------
+
+    @app.route("/api/invoice/<int:sale_id>")
+    def get_invoice(sale_id):
+        sale = Sale.query.get(sale_id)
+        if not sale:
+            return jsonify({"message": "Sale not found"}), 404
+
+        customer = Customer.query.get(sale.customer_id)
+        item = Item.query.get(sale.item_id)
+        company = Company.query.get(sale.company_id)
+
+        sale_data = {
+            "invoice_id": sale.id,
+            "company_name": company.name,
+            "company_gst": company.gst_number or "N/A",
+            "company_address": company.address or "N/A",
+            "customer_name": customer.name,
+            "customer_phone": customer.phone,
+            "items": [
+                {
+                    "name": item.name,
+                    "quantity": sale.quantity,
+                    "price": item.price,
+                    "total": sale.total_amount
+                }
+            ],
+            "grand_total": sale.total_amount
+        }
+
+        pdf_buffer = generate_invoice(sale_data)
+
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"Invoice_{sale.id}.pdf"
+        )
