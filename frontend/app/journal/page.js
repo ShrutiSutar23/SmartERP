@@ -4,13 +4,11 @@ import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function Vouchers() {
+export default function JournalVoucher() {
   const [vouchers, setVouchers] = useState([]);
-  const [voucherType, setVoucherType] = useState("Payment");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [partyName, setPartyName] = useState("");
-  const [filterType, setFilterType] = useState("");
   const [companyName, setCompanyName] = useState("");
   const router = useRouter();
 
@@ -20,26 +18,21 @@ export default function Vouchers() {
     return { token, companyId };
   };
 
-  const fetchVouchers = (type) => {
+  const fetchVouchers = () => {
     const { token, companyId } = getAuth();
     if (!token) { router.push("/login"); return; }
     if (!companyId) { router.push("/companies"); return; }
 
-    let url = "http://127.0.0.1:5000/api/vouchers?company_id=" + companyId;
-    if (type) url = url + "&type=" + type;
-
-    fetch(url, {
+    fetch("http://127.0.0.1:5000/api/vouchers?company_id=" + companyId + "&type=Journal", {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setVouchers(data);
-      });
+      .then((data) => { if (Array.isArray(data)) setVouchers(data); });
   };
 
   useEffect(() => {
     setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchVouchers("");
+    fetchVouchers();
   }, []);
 
   const handleSubmit = (e) => {
@@ -54,7 +47,7 @@ export default function Vouchers() {
       },
       body: JSON.stringify({
         company_id: companyId,
-        voucher_type: voucherType,
+        voucher_type: "Journal",
         description: description,
         amount: amount,
         party_name: partyName,
@@ -66,26 +59,14 @@ export default function Vouchers() {
         setDescription("");
         setAmount("");
         setPartyName("");
-        fetchVouchers(filterType);
+        fetchVouchers();
       });
   };
 
-  const handleFilter = (type) => {
-    setFilterType(type);
-    fetchVouchers(type);
-  };
-
-  const voucherColors = {
-    Payment: "bg-red-100",
-    Receipt: "bg-green-100",
-    Journal: "bg-yellow-100",
-    Contra: "bg-blue-100",
-  };
-
   return (
-    <AppLayout currentPage="vouchers">
+    <AppLayout currentPage="journal">
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-2">SmartERP - Vouchers</h1>
+        <h1 className="text-2xl font-bold mb-2">Journal Voucher (Ctrl+J)</h1>
         <p className="text-gray-500 mb-4">
           Company: {companyName}{" "}
           <a href="/companies" className="text-blue-600 underline">(Switch)</a>
@@ -97,41 +78,31 @@ export default function Vouchers() {
           <a href="/items" className="text-blue-600 underline">Items</a>
           <a href="/sales" className="text-blue-600 underline">Sales Voucher</a>
           <a href="/purchases" className="text-blue-600 underline">Purchase Voucher</a>
-          <a href="/vouchers" className="text-blue-600 underline">Other Vouchers</a>
+          <a href="/payment" className="text-blue-600 underline">Payment</a>
+          <a href="/receipt" className="text-blue-600 underline">Receipt</a>
+          <a href="/journal" className="text-blue-600 underline">Journal</a>
+          <a href="/contra" className="text-blue-600 underline">Contra</a>
           <a href="/reports" className="text-blue-600 underline">Reports</a>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded mb-6 border">
-          <h2 className="text-lg font-bold mb-3">Create Voucher</h2>
+        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-6">
+          <h2 className="text-lg font-bold mb-3 text-yellow-700">Create Journal Voucher</h2>
           <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap">
-            <select
-              value={voucherType}
-              onChange={(e) => setVoucherType(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-            >
-              <option value="Payment">F5 - Payment</option>
-              <option value="Receipt">F6 - Receipt</option>
-              <option value="Journal">F7 - Journal</option>
-              <option value="Contra">F4 - Contra</option>
-            </select>
-
             <input
               type="text"
-              placeholder="Party Name"
+              placeholder="Party Name (e.g. Internal)"
               value={partyName}
               onChange={(e) => setPartyName(e.target.value)}
               className="border border-gray-300 p-2 rounded"
             />
-
             <input
               type="text"
-              placeholder="Description"
+              placeholder="Description (e.g. Balance correction)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="border border-gray-300 p-2 rounded"
               required
             />
-
             <input
               type="text"
               placeholder="Amount"
@@ -140,28 +111,16 @@ export default function Vouchers() {
               className="border border-gray-300 p-2 rounded"
               required
             />
-
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              Save Voucher
+            <button type="submit" className="bg-yellow-600 text-white px-4 py-2 rounded">
+              Save Journal
             </button>
           </form>
         </div>
 
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => handleFilter("")} className="border px-3 py-1 rounded">All</button>
-          <button onClick={() => handleFilter("Payment")} className="border px-3 py-1 rounded bg-red-100">Payment</button>
-          <button onClick={() => handleFilter("Receipt")} className="border px-3 py-1 rounded bg-green-100">Receipt</button>
-          <button onClick={() => handleFilter("Journal")} className="border px-3 py-1 rounded bg-yellow-100">Journal</button>
-          <button onClick={() => handleFilter("Contra")} className="border px-3 py-1 rounded bg-blue-100">Contra</button>
-        </div>
-
+        <h2 className="text-xl font-bold mb-2">Journal History</h2>
         <table className="w-full border-collapse border border-gray-300">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 p-2">Type</th>
+            <tr className="bg-yellow-100">
               <th className="border border-gray-300 p-2">Party</th>
               <th className="border border-gray-300 p-2">Description</th>
               <th className="border border-gray-300 p-2">Amount</th>
@@ -169,8 +128,7 @@ export default function Vouchers() {
           </thead>
           <tbody>
             {vouchers.map((v) => (
-              <tr key={v.id} className={voucherColors[v.voucher_type] || ""}>
-                <td className="border border-gray-300 p-2">{v.voucher_type}</td>
+              <tr key={v.id} className="bg-yellow-50">
                 <td className="border border-gray-300 p-2">{v.party_name}</td>
                 <td className="border border-gray-300 p-2">{v.description}</td>
                 <td className="border border-gray-300 p-2">Rs.{v.amount}</td>
