@@ -4,12 +4,10 @@ import AppLayout from "./components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function Home() {
-  const [customers, setCustomers] = useState([]);
-  const [dashboard, setDashboard] = useState(null);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+export default function Gateway() {
   const [companyName, setCompanyName] = useState("");
+  const [financialYear, setFinancialYear] = useState("");
+  const [dashboard, setDashboard] = useState(null);
   const router = useRouter();
 
   const getAuth = () => {
@@ -18,194 +16,177 @@ export default function Home() {
     return { token, companyId };
   };
 
-  const fetchDashboard = () => {
-    const { token, companyId } = getAuth();
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const companyId = localStorage.getItem("selectedCompanyId");
+
     if (!token) { router.push("/login"); return; }
     if (!companyId) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/dashboard?company_id=" + companyId, {
-      headers: { Authorization: "Bearer " + token },
+    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
+    setFinancialYear(localStorage.getItem("selectedFinancialYear") || "2025-26");
+
+    const { token: t, companyId: cid } = getAuth();
+    fetch("http://127.0.0.1:5000/api/dashboard?company_id=" + cid, {
+      headers: { Authorization: "Bearer " + t },
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.total_sales !== undefined) {
-          setDashboard(data);
-        }
+        if (data.total_sales !== undefined) setDashboard(data);
       });
-  };
-
-  const fetchCustomers = () => {
-    const { token, companyId } = getAuth();
-
-    fetch("http://127.0.0.1:5000/api/customers?company_id=" + companyId, {
-      headers: { Authorization: "Bearer " + token },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setCustomers(data);
-        } else {
-          alert("Session expired. Please log in again.");
-          localStorage.removeItem("token");
-          router.push("/login");
-        }
-      });
-  };
-
-  useEffect(() => {
-    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchDashboard();
-    fetchCustomers();
   }, []);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const { token, companyId } = getAuth();
-
-    fetch("http://127.0.0.1:5000/api/add_customer", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      },
-      body: JSON.stringify({ name: name, phone: phone, company_id: companyId }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        alert(data.message);
-        setName("");
-        setPhone("");
-        fetchCustomers();
-        fetchDashboard();
-      });
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("selectedCompanyId");
+    localStorage.removeItem("selectedCompanyName");
     router.push("/login");
   };
 
+  const menuItems = [
+    {
+      section: "MASTERS",
+      color: "bg-blue-700",
+      lightColor: "bg-blue-50",
+      hoverColor: "hover:bg-blue-100",
+      borderColor: "border-blue-200",
+      items: [
+        { label: "Ledgers (Customers/Suppliers)", path: "/ledgers", key: "Alt+L" },
+        { label: "Stock Items", path: "/items", key: "Alt+S" },
+        { label: "Units of Measure", path: "/units", key: "Alt+U" },
+        { label: "Groups", path: "/groups", key: "Alt+G" },
+      ],
+    },
+    {
+      section: "TRANSACTIONS",
+      color: "bg-green-700",
+      lightColor: "bg-green-50",
+      hoverColor: "hover:bg-green-100",
+      borderColor: "border-green-200",
+      items: [
+        { label: "Sales Voucher", path: "/sales", key: "Fn+F8" },
+        { label: "Purchase Voucher", path: "/purchases", key: "Fn+F9" },
+        { label: "Payment Voucher", path: "/payment", key: "Ctrl+⇧+B" },
+        { label: "Receipt Voucher", path: "/receipt", key: "Ctrl+⇧+E" },
+        { label: "Journal Voucher", path: "/journal", key: "Ctrl+⇧+J" },
+        { label: "Contra Voucher", path: "/contra", key: "Ctrl+⇧+N" },
+      ],
+    },
+    {
+      section: "INVENTORY",
+      color: "bg-orange-700",
+      lightColor: "bg-orange-50",
+      hoverColor: "hover:bg-orange-100",
+      borderColor: "border-orange-200",
+      items: [
+        { label: "Stock Summary", path: "/stock-summary", key: "Ctrl+⇧+T" },
+        { label: "Stock Items", path: "/items", key: "Ctrl+I" },
+      ],
+    },
+    {
+      section: "REPORTS",
+      color: "bg-purple-700",
+      lightColor: "bg-purple-50",
+      hoverColor: "hover:bg-purple-100",
+      borderColor: "border-purple-200",
+      items: [
+        { label: "Sales Report", path: "/reports", key: "Ctrl+⇧+R" },
+        { label: "Purchase Report", path: "/reports", key: "Ctrl+⇧+R" },
+        { label: "Customer Outstanding", path: "/reports", key: "Ctrl+⇧+R" },
+        { label: "Stock Report", path: "/reports", key: "Ctrl+⇧+R" },
+      ],
+    },
+  ];
+
   return (
-    <AppLayout currentPage="dashboard">
-      <div className="p-8">
-        <div className="flex justify-between items-center mb-2">
-          <h1 className="text-2xl font-bold">SmartERP Dashboard</h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white px-3 py-1 rounded"
-          >
-            Logout
-          </button>
+    <AppLayout currentPage="gateway">
+      <div className="min-h-screen bg-gray-200">
+
+        {/* Top bar like Tally */}
+        <div className="bg-blue-900 text-white flex justify-between items-center px-4 py-1 text-xs">
+          <div className="flex gap-6">
+            <span className="cursor-pointer hover:text-yellow-300"
+              onClick={() => router.push("/companies")}>
+              K: Company
+            </span>
+            <span className="cursor-pointer hover:text-yellow-300"
+              onClick={() => router.push("/reports")}>
+              Y: Data
+            </span>
+          </div>
+          <div className="font-bold text-sm">{companyName}</div>
+          <div className="flex gap-4">
+            <span className="cursor-pointer hover:text-yellow-300"
+              onClick={handleLogout}>
+              Ctrl+Q: Logout
+            </span>
+          </div>
         </div>
 
-        <p className="text-gray-500 mb-4">
-          Company: {companyName}{" "}
-          <a href="/companies" className="text-blue-600 underline">(Switch)</a>
-        </p>
-
-        <div className="flex gap-4 mb-6 flex-wrap">
-          <a href="/" className="text-blue-600 underline">Customers</a>
-          <a href="/suppliers" className="text-blue-600 underline">Suppliers</a>
-          <a href="/items" className="text-blue-600 underline">Items</a>
-          <a href="/sales" className="text-blue-600 underline">Sales Voucher</a>
-          <a href="/purchases" className="text-blue-600 underline">Purchase Voucher</a>
-          <a href="/vouchers" className="text-blue-600 underline">Other Vouchers</a>
-          <a href="/reports" className="text-blue-600 underline">Reports</a>
+        {/* Company header */}
+        <div className="bg-blue-800 text-white text-center py-2">
+          <div className="text-lg font-bold">{companyName}</div>
+          <div className="text-xs text-blue-200">Financial Year: {financialYear}</div>
         </div>
 
+        {/* Gateway title */}
+        <div className="bg-gray-700 text-white text-center py-1 text-sm font-bold tracking-widest">
+          GATEWAY OF SMARTERP
+        </div>
+
+        {/* Summary bar */}
         {dashboard && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold mb-3">Business Summary</h2>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-              <div className="bg-green-100 p-4 rounded">
-                <p className="text-sm text-gray-600">Total Sales</p>
-                <p className="text-2xl font-bold">Rs.{dashboard.total_sales.toFixed(2)}</p>
-              </div>
-              <div className="bg-red-100 p-4 rounded">
-                <p className="text-sm text-gray-600">Total Purchases</p>
-                <p className="text-2xl font-bold">Rs.{dashboard.total_purchases.toFixed(2)}</p>
-              </div>
-              <div className="bg-blue-100 p-4 rounded">
-                <p className="text-sm text-gray-600">Outstanding (Receivable)</p>
-                <p className="text-2xl font-bold">Rs.{dashboard.outstanding_balance.toFixed(2)}</p>
-              </div>
-              <div className="bg-yellow-100 p-4 rounded">
-                <p className="text-sm text-gray-600">Total Payable</p>
-                <p className="text-2xl font-bold">Rs.{dashboard.total_payable.toFixed(2)}</p>
-              </div>
-              <div className="bg-purple-100 p-4 rounded">
-                <p className="text-sm text-gray-600">Total Customers</p>
-                <p className="text-2xl font-bold">{dashboard.total_customers}</p>
-              </div>
-              <div className="bg-orange-100 p-4 rounded">
-                <p className="text-sm text-gray-600">Total Suppliers</p>
-                <p className="text-2xl font-bold">{dashboard.total_suppliers}</p>
-              </div>
-            </div>
-
+          <div className="bg-gray-800 text-white flex justify-around py-2 text-xs">
+            <span>Total Sales: <strong className="text-green-400">Rs.{dashboard.total_sales.toFixed(2)}</strong></span>
+            <span>Total Purchases: <strong className="text-red-400">Rs.{dashboard.total_purchases.toFixed(2)}</strong></span>
+            <span>Customers: <strong className="text-blue-400">{dashboard.total_customers}</strong></span>
+            <span>Suppliers: <strong className="text-yellow-400">{dashboard.total_suppliers}</strong></span>
             {dashboard.low_stock_items.length > 0 && (
-              <div className="bg-red-50 border border-red-300 p-4 rounded">
-                <h3 className="font-bold text-red-600 mb-2">
-                  Low Stock Alert ({dashboard.low_stock_items.length} items)
-                </h3>
-                <ul>
-                  {dashboard.low_stock_items.map((item, index) => (
-                    <li key={index} className="text-sm text-red-700">
-                      {item.name} — only {item.quantity} units left
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <span className="text-red-400 animate-pulse">
+                ⚠ {dashboard.low_stock_items.length} Low Stock
+              </span>
             )}
           </div>
         )}
 
-        <h2 className="text-xl font-bold mb-3">Customers</h2>
+        {/* Main menu grid */}
+        <div className="grid grid-cols-2 gap-4 p-4">
+          {menuItems.map((menu) => (
+            <div key={menu.section} className={"rounded border " + menu.borderColor}>
+              <div className={"text-white text-sm font-bold px-3 py-2 " + menu.color}>
+                {menu.section}
+              </div>
+              <div className={menu.lightColor}>
+                {menu.items.map((item) => (
+                  <div
+                    key={item.label}
+                    onClick={() => router.push(item.path)}
+                    className={"flex justify-between items-center px-4 py-2 cursor-pointer border-b border-gray-200 " + menu.hoverColor}
+                  >
+                    <span className="text-sm">{item.label}</span>
+                    <span className="text-xs text-gray-400 font-mono">{item.key}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
 
-        <form onSubmit={handleSubmit} className="mb-4 flex gap-2">
-          <input
-            type="text"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
-            required
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            Add Customer
-          </button>
-        </form>
+        {/* Bottom status bar like Tally */}
+        <div className="fixed bottom-0 left-0 right-44 bg-gray-700 text-white flex justify-between px-4 py-1 text-xs">
+          <span className="cursor-pointer hover:text-yellow-300"
+            onClick={handleLogout}>
+            Q: Quit
+          </span>
+          <span>SmartERP — {companyName}</span>
+          <span className="cursor-pointer hover:text-yellow-300"
+            onClick={() => router.push("/companies")}>
+            F1: Select Company
+          </span>
+        </div>
 
-        <table className="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 p-2">Name</th>
-              <th className="border border-gray-300 p-2">Phone</th>
-              <th className="border border-gray-300 p-2">Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map((c) => (
-              <tr key={c.id}>
-                <td className="border border-gray-300 p-2">{c.name}</td>
-                <td className="border border-gray-300 p-2">{c.phone}</td>
-                <td className="border border-gray-300 p-2">Rs.{c.balance}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Bottom padding so content not hidden behind status bar */}
+        <div className="h-8"></div>
       </div>
     </AppLayout>
   );

@@ -77,13 +77,37 @@ export default function KeyboardShortcuts() {
           case "b":
           case "B":
             e.preventDefault();
-            router.push("/vouchers");
+            router.push("/payment");
+            break;
+
+          case "e":
+          case "E":
+            e.preventDefault();
+            router.push("/receipt");
             break;
 
           case "j":
           case "J":
             e.preventDefault();
-            router.push("/vouchers");
+            router.push("/journal");
+            break;
+          
+          case "n":
+          case "N":
+            e.preventDefault();
+            router.push("/contra");
+            break;
+
+          case "t":
+          case "T":
+            e.preventDefault();
+            router.push("/stock-summary");
+            break;
+
+          case "l":
+          case "L":
+            e.preventDefault();
+            router.push("/ledgers");
             break;
 
           default:

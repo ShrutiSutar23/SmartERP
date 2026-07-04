@@ -669,3 +669,39 @@ def register_routes(app):
             as_attachment=True,
             download_name=f"Invoice_{sale.id}.pdf"
         )
+    
+    @app.route("/api/stock_summary")
+    @jwt_required()
+    def stock_summary():
+        company_id = request.args.get("company_id")
+        all_items = Item.query.filter_by(company_id=company_id).all()
+        result = []
+
+        for item in all_items:
+            total_purchased = db.session.query(
+                db.func.sum(Purchase.quantity)
+            ).filter_by(company_id=company_id, item_id=item.id).scalar() or 0
+
+            total_sold = db.session.query(
+                db.func.sum(Sale.quantity)
+            ).filter_by(company_id=company_id, item_id=item.id).scalar() or 0
+
+            purchase_value = db.session.query(
+                db.func.sum(Purchase.total_amount)
+            ).filter_by(company_id=company_id, item_id=item.id).scalar() or 0
+
+            sale_value = db.session.query(
+                db.func.sum(Sale.total_amount)
+            ).filter_by(company_id=company_id, item_id=item.id).scalar() or 0
+
+            result.append({
+                "name": item.name,
+                "price": item.price,
+                "inwards": total_purchased,
+                "outwards": total_sold,
+                "closing": item.quantity,
+                "purchase_value": purchase_value,
+                "sale_value": sale_value,
+            })
+
+        return jsonify(result)
