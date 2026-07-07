@@ -1,7 +1,7 @@
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, jsonify
 from extensions import db
 from routes import register_routes
 from flask_cors import CORS

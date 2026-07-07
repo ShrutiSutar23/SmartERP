@@ -1,11 +1,14 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+const API_BASE = "http://127.0.0.1:5000/api";
 
 export default function ContraVoucher() {
+  const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [vouchers, setVouchers] = useState([]);
   const [description, setDescription] = useState("");
@@ -13,33 +16,47 @@ export default function ContraVoucher() {
   const [partyName, setPartyName] = useState("");
   const router = useRouter();
 
-  const fetchVouchers = () => {
+  const fetchVouchers = (cid) => {
     const token = localStorage.getItem("token");
-    const cid = companyId || localStorage.getItem("selectedCompanyId");
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/vouchers?company_id=" + cid + "&type=Contra", {
+    fetch(`${API_BASE}/vouchers?company_id=${cid}&type=Contra`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setVouchers(data); });
+      .then((data) => { if (Array.isArray(data)) setVouchers(data); })
+      .catch((error) => {
+        console.error("Failed to load vouchers", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
+      });
   };
 
-  useEffect(() => { 
-    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchVouchers(); }, [companyId]);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const cid = localStorage.getItem("selectedCompanyId");
+    const cname = localStorage.getItem("selectedCompanyName") || "";
+
+    if (!token) { router.push("/login"); return; }
+    if (!cid) { router.push("/companies"); return; }
+
+    setCompanyId(cid);
+    setCompanyName(cname);
+    fetchVouchers(cid);
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    const cid = companyId || localStorage.getItem("selectedCompanyId");
 
-    fetch("http://127.0.0.1:5000/api/voucher", {
+    fetch(`${API_BASE}/voucher`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token,
+      },
       body: JSON.stringify({
-        company_id: cid,
+        company_id: companyId,
         voucher_type: "Contra",
         description,
         amount,
@@ -52,41 +69,49 @@ export default function ContraVoucher() {
         setDescription("");
         setAmount("");
         setPartyName("");
-        
-        fetchVouchers();
+        fetchVouchers(companyId);
+      })
+      .catch((error) => {
+        console.error("Failed to save contra voucher", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
       });
   };
 
   return (
     <AppLayout currentPage="contra">
       <div className="p-8">
-        <div className="flex justify-between items-center mb-2">
-          <h1 className="text-2xl font-bold">Contra Voucher</h1>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-gray-600 text-white px-3 py-1 rounded text-sm"
-          >
-            ESC: Gateway
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold mb-2">Contra Voucher (Ctrl+N)</h1>
         <p className="text-gray-500 mb-4">
           Company: {companyName}{" "}
-          <a href="/companies" className="text-blue-600 underline">(Switch)</a>
+          <Link href="/companies" className="text-blue-600 underline">(Switch)</Link>
         </p>
 
+        <div className="flex gap-4 mb-4 flex-wrap">
+          <Link href="/" className="text-blue-600 underline">Dashboard</Link>
+          <Link href="/suppliers" className="text-blue-600 underline">Suppliers</Link>
+          <Link href="/items" className="text-blue-600 underline">Items</Link>
+          <Link href="/sales" className="text-blue-600 underline">Sales Voucher</Link>
+          <Link href="/purchases" className="text-blue-600 underline">Purchase Voucher</Link>
+          <Link href="/payment" className="text-blue-600 underline">Payment</Link>
+          <Link href="/receipt" className="text-blue-600 underline">Receipt</Link>
+          <Link href="/journal" className="text-blue-600 underline">Journal</Link>
+          <Link href="/contra" className="text-blue-600 underline">Contra</Link>
+          <Link href="/reports" className="text-blue-600 underline">Reports</Link>
+        </div>
+
         <div className="bg-blue-50 border border-blue-200 p-4 rounded mb-6">
-          <h2 className="font-bold text-blue-700 mb-3">Create Contra Entry</h2>
+          <h2 className="text-lg font-bold mb-3 text-blue-700">Create Contra Voucher</h2>
           <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap">
             <input
               type="text"
-              placeholder="Bank Name"
+              placeholder="Bank Name (e.g. SBI Bank)"
               value={partyName}
               onChange={(e) => setPartyName(e.target.value)}
               className="border border-gray-300 p-2 rounded"
             />
             <input
               type="text"
-              placeholder="Description"
+              placeholder="Description (e.g. Cash deposited)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="border border-gray-300 p-2 rounded"
@@ -100,15 +125,13 @@ export default function ContraVoucher() {
               className="border border-gray-300 p-2 rounded"
               required
             />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded"
-            >
+            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
               Save Contra
             </button>
           </form>
         </div>
 
+        <h2 className="text-xl font-bold mb-2">Contra History</h2>
         <table className="w-full border-collapse border border-gray-300">
           <thead>
             <tr className="bg-blue-100">
@@ -122,7 +145,7 @@ export default function ContraVoucher() {
               <tr key={v.id} className="bg-blue-50">
                 <td className="border border-gray-300 p-2">{v.party_name}</td>
                 <td className="border border-gray-300 p-2">{v.description}</td>
-                <td className="border border-gray-300 p-2 text-center">Rs.{v.amount}</td>
+                <td className="border border-gray-300 p-2">Rs.{v.amount}</td>
               </tr>
             ))}
           </tbody>

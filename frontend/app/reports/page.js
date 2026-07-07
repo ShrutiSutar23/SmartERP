@@ -1,11 +1,13 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+const API_BASE = "http://127.0.0.1:5000/api";
+
 export default function Reports() {
+  const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [activeReport, setActiveReport] = useState("sales");
   const [salesData, setSalesData] = useState({ sales: [], total: 0 });
@@ -14,13 +16,12 @@ export default function Reports() {
   const [customerData, setCustomerData] = useState({ customers: [], total_outstanding: 0 });
   const router = useRouter();
 
-  const fetchReport = (type) => {
+  const fetchReport = (type, cid) => {
     const token = localStorage.getItem("token");
-    const cid = companyId || localStorage.getItem("selectedCompanyId");
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/reports/" + type + "?company_id=" + cid, {
+    fetch(`${API_BASE}/reports/${type}?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -29,16 +30,28 @@ export default function Reports() {
         if (type === "purchases") setPurchaseData(data);
         if (type === "stock") setStockData(data);
         if (type === "customers") setCustomerData(data);
+      })
+      .catch((error) => {
+        console.error(`Failed to load ${type} report`, error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
       });
   };
 
   useEffect(() => {
-    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchReport("sales");
-    fetchReport("purchases");
-    fetchReport("stock");
-    fetchReport("customers");
-  }, [companyId]);
+    const token = localStorage.getItem("token");
+    const cid = localStorage.getItem("selectedCompanyId");
+    const cname = localStorage.getItem("selectedCompanyName") || "";
+
+    if (!token) { router.push("/login"); return; }
+    if (!cid) { router.push("/companies"); return; }
+
+    setCompanyId(cid);
+    setCompanyName(cname);
+    fetchReport("sales", cid);
+    fetchReport("purchases", cid);
+    fetchReport("stock", cid);
+    fetchReport("customers", cid);
+  }, []);
 
   const tabClass = (type) => "px-4 py-2 rounded-t font-semibold cursor-pointer " + (activeReport === type ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700");
 

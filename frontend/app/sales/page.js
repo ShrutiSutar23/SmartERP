@@ -1,7 +1,6 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -19,7 +18,7 @@ export default function SalesVoucher() {
   const router = useRouter();
 
   const getToken = () => localStorage.getItem("token");
-  const getCid = () => companyId || localStorage.getItem("selectedCompanyId");
+  const getCid = () => localStorage.getItem("selectedCompanyId");
 
   const fetchAll = () => {
     const token = getToken();
@@ -40,10 +39,15 @@ export default function SalesVoucher() {
   useEffect(() => {
     setCompanyName(localStorage.getItem("selectedCompanyName") || "");
     fetchAll();
-    const handleF2 = (e) => { if (e.key === "F2") { e.preventDefault(); document.getElementById("voucherDate")?.focus(); } };
+    const handleF2 = (e) => {
+      if (e.key === "F2") {
+        e.preventDefault();
+        document.getElementById("voucherDate")?.focus();
+      }
+    };
     window.addEventListener("keydown", handleF2);
     return () => window.removeEventListener("keydown", handleF2);
-  }, [companyId]);
+  }, []);
 
   const handleAddCustomer = (e) => {
     e.preventDefault();
@@ -69,7 +73,9 @@ export default function SalesVoucher() {
       .then((data) => { alert(data.message); setCustomerId(""); setItemId(""); setQuantity(""); fetchAll(); });
   };
 
-  const handleDownloadPDF = (saleId) => { window.open("http://127.0.0.1:5000/api/invoice/" + saleId, "_blank"); };
+  const handleDownloadPDF = (saleId) => {
+    window.open("http://127.0.0.1:5000/api/invoice/" + saleId, "_blank");
+  };
 
   return (
     <AppLayout currentPage="sales">
@@ -78,7 +84,10 @@ export default function SalesVoucher() {
           <h1 className="text-2xl font-bold">Sales Voucher (Fn+F8)</h1>
           <button onClick={() => router.push("/")} className="bg-gray-600 text-white px-3 py-1 rounded text-sm">ESC: Gateway</button>
         </div>
-        <p className="text-gray-500 mb-4">Company: {companyName}{" "}<a href="/companies" className="text-blue-600 underline">(Switch)</a></p>
+        <p className="text-gray-500 mb-4">
+          Company: {companyName}{" "}
+          <a href="/companies" className="text-blue-600 underline">(Switch)</a>
+        </p>
 
         <div className="bg-gray-50 border p-4 rounded mb-4">
           <div className="flex items-center gap-3 mb-3">
@@ -97,7 +106,7 @@ export default function SalesVoucher() {
 
           <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Select Existing Customer</p>
+              <p className="text-xs text-gray-500 mb-1">Select Customer</p>
               <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="border border-gray-300 p-2 rounded" required>
                 <option value="">Select Customer</option>
                 {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
@@ -115,7 +124,7 @@ export default function SalesVoucher() {
               <input type="text" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="border border-gray-300 p-2 rounded w-24" required />
             </div>
             <div className="flex items-end">
-              <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Create Sale (Enter)</button>
+              <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Create Sale</button>
             </div>
           </form>
         </div>

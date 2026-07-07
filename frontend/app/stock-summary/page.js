@@ -1,7 +1,6 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -11,18 +10,21 @@ export default function StockSummary() {
   const router = useRouter();
 
   useEffect(() => {
-    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
     const token = localStorage.getItem("token");
-    const cid = companyId || localStorage.getItem("selectedCompanyId");
+    const cid = localStorage.getItem("selectedCompanyId");
+    const name = localStorage.getItem("selectedCompanyName");
+
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
+
+    setCompanyName(name || "");
 
     fetch("http://127.0.0.1:5000/api/stock_summary?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setStocks(data); });
-  }, [companyId]);
+  }, []);
 
   return (
     <AppLayout currentPage="stock-summary">
@@ -31,7 +33,10 @@ export default function StockSummary() {
           <h1 className="text-2xl font-bold">Stock Summary</h1>
           <button onClick={() => router.push("/")} className="bg-gray-600 text-white px-3 py-1 rounded text-sm">ESC: Gateway</button>
         </div>
-        <p className="text-gray-500 mb-6">Company: {companyName}{" "}<a href="/companies" className="text-blue-600 underline">(Switch)</a></p>
+        <p className="text-gray-500 mb-6">
+          Company: {companyName}{" "}
+          <a href="/companies" className="text-blue-600 underline">(Switch)</a>
+        </p>
 
         <table className="w-full border-collapse border border-gray-400">
           <thead>

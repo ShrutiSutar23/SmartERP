@@ -1,12 +1,11 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function PaymentVoucher() {
-  const [companyName, setCompanyName] = useState(""); 
+  const [companyName, setCompanyName] = useState("");
   const [vouchers, setVouchers] = useState([]);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -15,32 +14,32 @@ export default function PaymentVoucher() {
 
   const fetchVouchers = () => {
     const token = localStorage.getItem("token");
+    const cid = localStorage.getItem("selectedCompanyId");
     if (!token) { router.push("/login"); return; }
-    if (!companyId) { router.push("/companies"); return; }
+    if (!cid) { router.push("/companies"); return; }
 
-    fetch(`http://127.0.0.1:5000/api/vouchers?company_id=${companyId}&type=Payment`, {
+    fetch("http://127.0.0.1:5000/api/vouchers?company_id=" + cid + "&type=Payment", {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setVouchers(data); });
   };
 
-  // ✅ re-fetch whenever companyId changes
   useEffect(() => {
     setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    if (companyId) fetchVouchers();
-  }, [companyId]);
+    fetchVouchers();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    if (!token || !companyId) return;
+    const cid = localStorage.getItem("selectedCompanyId");
 
     fetch("http://127.0.0.1:5000/api/voucher", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({
-        company_id: companyId,
+        company_id: cid,
         voucher_type: "Payment",
         description,
         amount,
@@ -53,7 +52,7 @@ export default function PaymentVoucher() {
         setDescription("");
         setAmount("");
         setPartyName("");
-        fetchVouchers(); // ✅ refresh list after save
+        fetchVouchers();
       });
   };
 
@@ -62,14 +61,8 @@ export default function PaymentVoucher() {
       <div className="p-8">
         <div className="flex justify-between items-center mb-2">
           <h1 className="text-2xl font-bold">Payment Voucher</h1>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-gray-600 text-white px-3 py-1 rounded text-sm"
-          >
-            ESC: Gateway
-          </button>
+          <button onClick={() => router.push("/")} className="bg-gray-600 text-white px-3 py-1 rounded text-sm">ESC: Gateway</button>
         </div>
-
         <p className="text-gray-500 mb-4">
           Company: {companyName}{" "}
           <a href="/companies" className="text-blue-600 underline">(Switch)</a>
@@ -78,32 +71,10 @@ export default function PaymentVoucher() {
         <div className="bg-red-50 border border-red-200 p-4 rounded mb-6">
           <h2 className="font-bold text-red-700 mb-3">Create Payment</h2>
           <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap">
-            <input
-              type="text"
-              placeholder="Party Name"
-              value={partyName}
-              onChange={(e) => setPartyName(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-            />
-            <input
-              type="text"
-              placeholder="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="Amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-              required
-            />
-            <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded">
-              Save Payment
-            </button>
+            <input type="text" placeholder="Party Name" value={partyName} onChange={(e) => setPartyName(e.target.value)} className="border border-gray-300 p-2 rounded" />
+            <input type="text" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} className="border border-gray-300 p-2 rounded" required />
+            <input type="text" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="border border-gray-300 p-2 rounded" required />
+            <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded">Save Payment</button>
           </form>
         </div>
 

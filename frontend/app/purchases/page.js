@@ -1,11 +1,13 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+const API_BASE = "http://127.0.0.1:5000/api";
+
 export default function PurchaseVoucher() {
+  const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [suppliers, setSuppliers] = useState([]);
   const [items, setItems] = useState([]);
@@ -18,37 +20,54 @@ export default function PurchaseVoucher() {
   const [newSupplierPhone, setNewSupplierPhone] = useState("");
   const router = useRouter();
 
-  const getToken = () => localStorage.getItem("token");
-  const getCid = () => companyId || localStorage.getItem("selectedCompanyId");
-
-  const fetchAll = () => {
-    const token = getToken();
-    const cid = getCid();
+  const fetchAll = (cid) => {
+    const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/suppliers?company_id=" + cid, {
+    fetch(`${API_BASE}/suppliers?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setSuppliers(data); });
+      .then((data) => { if (Array.isArray(data)) setSuppliers(data); })
+      .catch((error) => {
+        console.error("Failed to load suppliers", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
+      });
 
-    fetch("http://127.0.0.1:5000/api/items?company_id=" + cid, {
+    fetch(`${API_BASE}/items?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setItems(data); });
+      .then((data) => { if (Array.isArray(data)) setItems(data); })
+      .catch((error) => {
+        console.error("Failed to load items", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
+      });
 
-    fetch("http://127.0.0.1:5000/api/purchase_history?company_id=" + cid, {
+    fetch(`${API_BASE}/purchase_history?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setPurchases(data); });
+      .then((data) => { if (Array.isArray(data)) setPurchases(data); })
+      .catch((error) => {
+        console.error("Failed to load purchase history", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
+      });
   };
 
   useEffect(() => {
-    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchAll();
+    const token = localStorage.getItem("token");
+    const cid = localStorage.getItem("selectedCompanyId");
+    const cname = localStorage.getItem("selectedCompanyName") || "";
+
+    if (!token) { router.push("/login"); return; }
+    if (!cid) { router.push("/companies"); return; }
+
+    setCompanyId(cid);
+    setCompanyName(cname);
+    fetchAll(cid);
+
     const handleF2 = (e) => {
       if (e.key === "F2") {
         e.preventDefault();
@@ -57,38 +76,40 @@ export default function PurchaseVoucher() {
     };
     window.addEventListener("keydown", handleF2);
     return () => window.removeEventListener("keydown", handleF2);
-  }, [companyId]);
+  }, []);
 
   const handleAddSupplier = (e) => {
     e.preventDefault();
-    const token = getToken();
-    const cid = getCid();
-    fetch("http://127.0.0.1:5000/api/add_supplier", {
+    const token = localStorage.getItem("token");
+    fetch(`${API_BASE}/add_supplier`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify({ name: newSupplierName, phone: newSupplierPhone, company_id: cid }),
+      body: JSON.stringify({ name: newSupplierName, phone: newSupplierPhone, company_id: companyId }),
     })
       .then((res) => res.json())
       .then((data) => {
         alert(data.message);
         setNewSupplierName("");
         setNewSupplierPhone("");
-        fetchAll();
+        fetchAll(companyId);
+      })
+      .catch((error) => {
+        console.error("Failed to add supplier", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
       });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const token = getToken();
-    const cid = getCid();
-    fetch("http://127.0.0.1:5000/api/purchase_voucher", {
+    const token = localStorage.getItem("token");
+    fetch(`${API_BASE}/purchase_voucher`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({
         supplier_id: supplierId,
         item_id: itemId,
         quantity: quantity,
-        company_id: cid,
+        company_id: companyId,
       }),
     })
       .then((res) => res.json())
@@ -97,7 +118,11 @@ export default function PurchaseVoucher() {
         setSupplierId("");
         setItemId("");
         setQuantity("");
-        fetchAll();
+        fetchAll(companyId);
+      })
+      .catch((error) => {
+        console.error("Failed to create purchase", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
       });
   };
 

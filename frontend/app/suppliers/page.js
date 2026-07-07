@@ -1,46 +1,68 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+const API_BASE = "http://127.0.0.1:5000/api";
+
 export default function Suppliers() {
+  const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [suppliers, setSuppliers] = useState([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const router = useRouter();
 
-  const fetchSuppliers = () => {
+  const fetchSuppliers = (cid) => {
     const token = localStorage.getItem("token");
-    const cid = companyId || localStorage.getItem("selectedCompanyId");
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/suppliers?company_id=" + cid, {
+    fetch(`${API_BASE}/suppliers?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setSuppliers(data); });
+      .then((data) => { if (Array.isArray(data)) setSuppliers(data); })
+      .catch((error) => {
+        console.error("Failed to load suppliers", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
+      });
   };
 
-  useEffect(() => { 
-    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchSuppliers(); }, [companyId]);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const cid = localStorage.getItem("selectedCompanyId");
+    const cname = localStorage.getItem("selectedCompanyName") || "";
+
+    if (!token) { router.push("/login"); return; }
+    if (!cid) { router.push("/companies"); return; }
+
+    setCompanyId(cid);
+    setCompanyName(cname);
+    fetchSuppliers(cid);
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    const cid = companyId || localStorage.getItem("selectedCompanyId");
 
-    fetch("http://127.0.0.1:5000/api/add_supplier", {
+    fetch(`${API_BASE}/add_supplier`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify({ name, phone, company_id: cid }),
+      body: JSON.stringify({ name, phone, company_id: companyId }),
     })
       .then((res) => res.json())
-      .then((data) => { alert(data.message); setName(""); setPhone(""); fetchSuppliers(); });
+      .then((data) => {
+        alert(data.message);
+        setName("");
+        setPhone("");
+        fetchSuppliers(companyId);
+      })
+      .catch((error) => {
+        console.error("Failed to add supplier", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
+      });
   };
 
   return (

@@ -1,11 +1,13 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+const API_BASE = "http://127.0.0.1:5000/api";
+
 export default function Vouchers() {
+  const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [vouchers, setVouchers] = useState([]);
   const [voucherType, setVoucherType] = useState("Payment");
@@ -15,36 +17,57 @@ export default function Vouchers() {
   const [filterType, setFilterType] = useState("");
   const router = useRouter();
 
-  const fetchVouchers = (type) => {
+  const fetchVouchers = (type, cid) => {
     const token = localStorage.getItem("token");
-    const cid = companyId || localStorage.getItem("selectedCompanyId");
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    let url = "http://127.0.0.1:5000/api/vouchers?company_id=" + cid;
+    let url = `${API_BASE}/vouchers?company_id=${cid}`;
     if (type) url = url + "&type=" + type;
 
     fetch(url, { headers: { Authorization: "Bearer " + token } })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setVouchers(data); });
+      .then((data) => { if (Array.isArray(data)) setVouchers(data); })
+      .catch((error) => {
+        console.error("Failed to load vouchers", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
+      });
   };
 
-  useEffect(() => { 
-    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchVouchers(""); }, [companyId]);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const cid = localStorage.getItem("selectedCompanyId");
+    const cname = localStorage.getItem("selectedCompanyName") || "";
+
+    if (!token) { router.push("/login"); return; }
+    if (!cid) { router.push("/companies"); return; }
+
+    setCompanyId(cid);
+    setCompanyName(cname);
+    fetchVouchers("", cid);
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    const cid = companyId || localStorage.getItem("selectedCompanyId");
 
-    fetch("http://127.0.0.1:5000/api/voucher", {
+    fetch(`${API_BASE}/voucher`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify({ company_id: cid, voucher_type: voucherType, description, amount, party_name: partyName }),
+      body: JSON.stringify({ company_id: companyId, voucher_type: voucherType, description, amount, party_name: partyName }),
     })
       .then((res) => res.json())
-      .then((data) => { alert(data.message); setDescription(""); setAmount(""); setPartyName(""); fetchVouchers(filterType); });
+      .then((data) => {
+        alert(data.message);
+        setDescription("");
+        setAmount("");
+        setPartyName("");
+        fetchVouchers(filterType, companyId);
+      })
+      .catch((error) => {
+        console.error("Failed to save voucher", error);
+        alert("Unable to connect to the server. Please make sure the backend is running.");
+      });
   };
 
   const voucherColors = { Payment: "bg-red-100", Receipt: "bg-green-100", Journal: "bg-yellow-100", Contra: "bg-blue-100" };
@@ -75,11 +98,11 @@ export default function Vouchers() {
         </div>
 
         <div className="flex gap-2 mb-4">
-          <button onClick={() => { setFilterType(""); fetchVouchers(""); }} className="border px-3 py-1 rounded">All</button>
-          <button onClick={() => { setFilterType("Payment"); fetchVouchers("Payment"); }} className="border px-3 py-1 rounded bg-red-100">Payment</button>
-          <button onClick={() => { setFilterType("Receipt"); fetchVouchers("Receipt"); }} className="border px-3 py-1 rounded bg-green-100">Receipt</button>
-          <button onClick={() => { setFilterType("Journal"); fetchVouchers("Journal"); }} className="border px-3 py-1 rounded bg-yellow-100">Journal</button>
-          <button onClick={() => { setFilterType("Contra"); fetchVouchers("Contra"); }} className="border px-3 py-1 rounded bg-blue-100">Contra</button>
+          <button onClick={() => { setFilterType(""); fetchVouchers("", companyId); }} className="border px-3 py-1 rounded">All</button>
+          <button onClick={() => { setFilterType("Payment"); fetchVouchers("Payment", companyId); }} className="border px-3 py-1 rounded bg-red-100">Payment</button>
+          <button onClick={() => { setFilterType("Receipt"); fetchVouchers("Receipt", companyId); }} className="border px-3 py-1 rounded bg-green-100">Receipt</button>
+          <button onClick={() => { setFilterType("Journal"); fetchVouchers("Journal", companyId); }} className="border px-3 py-1 rounded bg-yellow-100">Journal</button>
+          <button onClick={() => { setFilterType("Contra"); fetchVouchers("Contra", companyId); }} className="border px-3 py-1 rounded bg-blue-100">Contra</button>
         </div>
 
         <table className="w-full border-collapse border border-gray-300">
