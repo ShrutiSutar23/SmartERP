@@ -1,49 +1,45 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function PurchaseVoucher() {
+  const [companyName, setCompanyName] = useState("");
   const [suppliers, setSuppliers] = useState([]);
   const [items, setItems] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [supplierId, setSupplierId] = useState("");
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [voucherDate, setVoucherDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [voucherDate, setVoucherDate] = useState(new Date().toISOString().split("T")[0]);
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierPhone, setNewSupplierPhone] = useState("");
   const router = useRouter();
 
-  const getAuth = () => {
-    const token = localStorage.getItem("token");
-    const companyId = localStorage.getItem("selectedCompanyId");
-    return { token, companyId };
-  };
+  const getToken = () => localStorage.getItem("token");
+  const getCid = () => companyId || localStorage.getItem("selectedCompanyId");
 
-  const fetchDropdownData = () => {
-    const { token, companyId } = getAuth();
+  const fetchAll = () => {
+    const token = getToken();
+    const cid = getCid();
     if (!token) { router.push("/login"); return; }
-    if (!companyId) { router.push("/companies"); return; }
+    if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/suppliers?company_id=" + companyId, {
+    fetch("http://127.0.0.1:5000/api/suppliers?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setSuppliers(data); });
 
-    fetch("http://127.0.0.1:5000/api/items?company_id=" + companyId, {
+    fetch("http://127.0.0.1:5000/api/items?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setItems(data); });
-  };
 
-  const fetchPurchaseHistory = () => {
-    const { token, companyId } = getAuth();
-    fetch("http://127.0.0.1:5000/api/purchase_history?company_id=" + companyId, {
+    fetch("http://127.0.0.1:5000/api/purchase_history?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -52,34 +48,47 @@ export default function PurchaseVoucher() {
 
   useEffect(() => {
     setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchDropdownData();
-    fetchPurchaseHistory();
-
+    fetchAll();
     const handleF2 = (e) => {
       if (e.key === "F2") {
         e.preventDefault();
-        document.getElementById("voucherDate").focus();
+        document.getElementById("voucherDate")?.focus();
       }
     };
     window.addEventListener("keydown", handleF2);
     return () => window.removeEventListener("keydown", handleF2);
-  }, []);
+  }, [companyId]);
+
+  const handleAddSupplier = (e) => {
+    e.preventDefault();
+    const token = getToken();
+    const cid = getCid();
+    fetch("http://127.0.0.1:5000/api/add_supplier", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ name: newSupplierName, phone: newSupplierPhone, company_id: cid }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        alert(data.message);
+        setNewSupplierName("");
+        setNewSupplierPhone("");
+        fetchAll();
+      });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { token, companyId } = getAuth();
-
+    const token = getToken();
+    const cid = getCid();
     fetch("http://127.0.0.1:5000/api/purchase_voucher", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({
         supplier_id: supplierId,
         item_id: itemId,
         quantity: quantity,
-        company_id: companyId,
+        company_id: cid,
       }),
     })
       .then((res) => res.json())
@@ -88,35 +97,30 @@ export default function PurchaseVoucher() {
         setSupplierId("");
         setItemId("");
         setQuantity("");
-        fetchDropdownData();
-        fetchPurchaseHistory();
+        fetchAll();
       });
   };
 
   return (
     <AppLayout currentPage="purchases">
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-2">SmartERP - Purchase Voucher (F9)</h1>
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-2xl font-bold">Purchase Voucher (Fn+F9)</h1>
+          <button
+            onClick={() => router.push("/")}
+            className="bg-gray-600 text-white px-3 py-1 rounded text-sm"
+          >
+            ESC: Gateway
+          </button>
+        </div>
         <p className="text-gray-500 mb-4">
           Company: {companyName}{" "}
           <a href="/companies" className="text-blue-600 underline">(Switch)</a>
         </p>
 
-        <div className="flex gap-4 mb-4 flex-wrap">
-          <a href="/" className="text-blue-600 underline">Dashboard</a>
-          <a href="/suppliers" className="text-blue-600 underline">Suppliers</a>
-          <a href="/items" className="text-blue-600 underline">Items</a>
-          <a href="/sales" className="text-blue-600 underline">Sales Voucher</a>
-          <a href="/purchases" className="text-blue-600 underline">Purchase Voucher</a>
-          <a href="/vouchers" className="text-blue-600 underline">Other Vouchers</a>
-          <a href="/reports" className="text-blue-600 underline">Reports</a>
-        </div>
-
-        <div className="bg-gray-50 p-4 rounded mb-4 border">
-          <div className="flex items-center gap-3 mb-4">
-            <label className="text-sm font-semibold w-32">
-              Date (F2 to focus):
-            </label>
+        <div className="bg-gray-50 border p-4 rounded mb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <label className="text-sm font-semibold">Date (F2):</label>
             <input
               id="voucherDate"
               type="date"
@@ -126,46 +130,81 @@ export default function PurchaseVoucher() {
             />
           </div>
 
+          <div className="mb-3 border p-3 rounded bg-white">
+            <h3 className="font-semibold text-sm mb-2">New Supplier</h3>
+            <form onSubmit={handleAddSupplier} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Supplier name"
+                value={newSupplierName}
+                onChange={(e) => setNewSupplierName(e.target.value)}
+                className="border p-2 rounded text-sm flex-1"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Phone"
+                value={newSupplierPhone}
+                onChange={(e) => setNewSupplierPhone(e.target.value)}
+                className="border p-2 rounded text-sm w-32"
+              />
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+              >
+                Add Supplier
+              </button>
+            </form>
+          </div>
+
           <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap">
-            <select
-              value={supplierId}
-              onChange={(e) => setSupplierId(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-              required
-            >
-              <option value="">Select Supplier</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={itemId}
-              onChange={(e) => setItemId(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-              required
-            >
-              <option value="">Select Item</option>
-              {items.map((i) => (
-                <option key={i.id} value={i.id}>{i.name} (Stock: {i.quantity})</option>
-              ))}
-            </select>
-
-            <input
-              type="text"
-              placeholder="Quantity"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-              required
-            />
-
-            <button
-              type="submit"
-              className="bg-green-600 text-white px-4 py-2 rounded"
-            >
-              Create Purchase (Enter)
-            </button>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Select Existing Supplier</p>
+              <select
+                value={supplierId}
+                onChange={(e) => setSupplierId(e.target.value)}
+                className="border border-gray-300 p-2 rounded"
+                required
+              >
+                <option value="">Select Supplier</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Select Item</p>
+              <select
+                value={itemId}
+                onChange={(e) => setItemId(e.target.value)}
+                className="border border-gray-300 p-2 rounded"
+                required
+              >
+                <option value="">Select Item</option>
+                {items.map((i) => (
+                  <option key={i.id} value={i.id}>{i.name} (Stock: {i.quantity})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Quantity</p>
+              <input
+                type="text"
+                placeholder="Qty"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="border border-gray-300 p-2 rounded w-24"
+                required
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="bg-green-600 text-white px-4 py-2 rounded"
+              >
+                Create Purchase (Enter)
+              </button>
+            </div>
           </form>
         </div>
 
@@ -173,19 +212,21 @@ export default function PurchaseVoucher() {
         <table className="w-full border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-100">
+              <th className="border border-gray-300 p-2">Date</th>
               <th className="border border-gray-300 p-2">Supplier</th>
               <th className="border border-gray-300 p-2">Item</th>
-              <th className="border border-gray-300 p-2">Quantity</th>
+              <th className="border border-gray-300 p-2">Qty</th>
               <th className="border border-gray-300 p-2">Total</th>
             </tr>
           </thead>
           <tbody>
             {purchases.map((p) => (
               <tr key={p.id}>
+                <td className="border border-gray-300 p-2 text-center text-gray-500">{p.date || "-"}</td>
                 <td className="border border-gray-300 p-2">{p.supplier_name}</td>
                 <td className="border border-gray-300 p-2">{p.item_name}</td>
-                <td className="border border-gray-300 p-2">{p.quantity}</td>
-                <td className="border border-gray-300 p-2">Rs.{p.total_amount}</td>
+                <td className="border border-gray-300 p-2 text-center">{p.quantity}</td>
+                <td className="border border-gray-300 p-2 text-center">Rs.{p.total_amount}</td>
               </tr>
             ))}
           </tbody>

@@ -1,140 +1,68 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function ReceiptVoucher() {
+  const [companyName, setCompanyName] = useState("");
   const [vouchers, setVouchers] = useState([]);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [partyName, setPartyName] = useState("");
-  const [companyName, setCompanyName] = useState("");
   const router = useRouter();
 
-  const getAuth = () => {
-    const token = localStorage.getItem("token");
-    const companyId = localStorage.getItem("selectedCompanyId");
-    return { token, companyId };
-  };
-
   const fetchVouchers = () => {
-    const { token, companyId } = getAuth();
+    const token = localStorage.getItem("token");
+    const cid = companyId || localStorage.getItem("selectedCompanyId");
     if (!token) { router.push("/login"); return; }
-    if (!companyId) { router.push("/companies"); return; }
+    if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/vouchers?company_id=" + companyId + "&type=Receipt", {
-      headers: { Authorization: "Bearer " + token },
-    })
-      .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setVouchers(data); });
+    fetch("http://127.0.0.1:5000/api/vouchers?company_id=" + cid + "&type=Receipt", { headers: { Authorization: "Bearer " + token } })
+      .then((res) => res.json()).then((data) => { if (Array.isArray(data)) setVouchers(data); });
   };
 
-  useEffect(() => {
+  useEffect(() => { 
     setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchVouchers();
-  }, []);
+    fetchVouchers(); }, [companyId]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { token, companyId } = getAuth();
+    const token = localStorage.getItem("token");
+    const cid = companyId || localStorage.getItem("selectedCompanyId");
 
     fetch("http://127.0.0.1:5000/api/voucher", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      },
-      body: JSON.stringify({
-        company_id: companyId,
-        voucher_type: "Receipt",
-        description: description,
-        amount: amount,
-        party_name: partyName,
-      }),
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ company_id: cid, voucher_type: "Receipt", description, amount, party_name: partyName }),
     })
       .then((res) => res.json())
-      .then((data) => {
-        alert(data.message);
-        setDescription("");
-        setAmount("");
-        setPartyName("");
-        fetchVouchers();
-      });
+      .then((data) => { alert(data.message); setDescription(""); setAmount(""); setPartyName(""); fetchVouchers(); });
   };
 
   return (
     <AppLayout currentPage="receipt">
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-2">Receipt Voucher (Ctrl+E)</h1>
-        <p className="text-gray-500 mb-4">
-          Company: {companyName}{" "}
-          <a href="/companies" className="text-blue-600 underline">(Switch)</a>
-        </p>
-
-        <div className="flex gap-4 mb-4 flex-wrap">
-          <a href="/" className="text-blue-600 underline">Dashboard</a>
-          <a href="/suppliers" className="text-blue-600 underline">Suppliers</a>
-          <a href="/items" className="text-blue-600 underline">Items</a>
-          <a href="/sales" className="text-blue-600 underline">Sales Voucher</a>
-          <a href="/purchases" className="text-blue-600 underline">Purchase Voucher</a>
-          <a href="/payment" className="text-blue-600 underline">Payment</a>
-          <a href="/receipt" className="text-blue-600 underline">Receipt</a>
-          <a href="/journal" className="text-blue-600 underline">Journal</a>
-          <a href="/contra" className="text-blue-600 underline">Contra</a>
-          <a href="/reports" className="text-blue-600 underline">Reports</a>
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-2xl font-bold">Receipt Voucher</h1>
+          <button onClick={() => router.push("/")} className="bg-gray-600 text-white px-3 py-1 rounded text-sm">ESC: Gateway</button>
         </div>
+        <p className="text-gray-500 mb-4">Company: {companyName}{" "}<a href="/companies" className="text-blue-600 underline">(Switch)</a></p>
 
         <div className="bg-green-50 border border-green-200 p-4 rounded mb-6">
-          <h2 className="text-lg font-bold mb-3 text-green-700">Create Receipt Voucher</h2>
+          <h2 className="font-bold text-green-700 mb-3">Create Receipt</h2>
           <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap">
-            <input
-              type="text"
-              placeholder="Party Name (e.g. Customer Name)"
-              value={partyName}
-              onChange={(e) => setPartyName(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-            />
-            <input
-              type="text"
-              placeholder="Description (e.g. Payment received)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="Amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-              required
-            />
-            <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">
-              Save Receipt
-            </button>
+            <input type="text" placeholder="Party Name" value={partyName} onChange={(e) => setPartyName(e.target.value)} className="border border-gray-300 p-2 rounded" />
+            <input type="text" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} className="border border-gray-300 p-2 rounded" required />
+            <input type="text" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="border border-gray-300 p-2 rounded" required />
+            <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Save Receipt</button>
           </form>
         </div>
 
-        <h2 className="text-xl font-bold mb-2">Receipt History</h2>
         <table className="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-green-100">
-              <th className="border border-gray-300 p-2">Party</th>
-              <th className="border border-gray-300 p-2">Description</th>
-              <th className="border border-gray-300 p-2">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vouchers.map((v) => (
-              <tr key={v.id} className="bg-green-50">
-                <td className="border border-gray-300 p-2">{v.party_name}</td>
-                <td className="border border-gray-300 p-2">{v.description}</td>
-                <td className="border border-gray-300 p-2">Rs.{v.amount}</td>
-              </tr>
-            ))}
-          </tbody>
+          <thead><tr className="bg-green-100"><th className="border border-gray-300 p-2">Party</th><th className="border border-gray-300 p-2">Description</th><th className="border border-gray-300 p-2">Amount</th></tr></thead>
+          <tbody>{vouchers.map((v) => (<tr key={v.id} className="bg-green-50"><td className="border border-gray-300 p-2">{v.party_name}</td><td className="border border-gray-300 p-2">{v.description}</td><td className="border border-gray-300 p-2 text-center">Rs.{v.amount}</td></tr>))}</tbody>
         </table>
       </div>
     </AppLayout>

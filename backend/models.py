@@ -1,5 +1,6 @@
 from extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -30,8 +31,13 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
-    price = db.Column(db.Float, nullable=False)
+    hsn_code = db.Column(db.String(20))
+    unit_id = db.Column(db.Integer, db.ForeignKey('unit.id'), nullable=True)
+    unit_symbol = db.Column(db.String(20), default='')
+    purchase_price = db.Column(db.Float, nullable=False)
+    selling_price = db.Column(db.Float, nullable=False)
     quantity = db.Column(db.Integer, default=0)
+    gst_percentage = db.Column(db.Float, default=0.0)
 
 class Sale(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -40,6 +46,7 @@ class Sale(db.Model):
     item_id = db.Column(db.Integer, db.ForeignKey('item.id'))
     quantity = db.Column(db.Integer, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Purchase(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -48,6 +55,7 @@ class Purchase(db.Model):
     item_id = db.Column(db.Integer, db.ForeignKey('item.id'))
     quantity = db.Column(db.Integer, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -66,3 +74,10 @@ class Voucher(db.Model):
     description = db.Column(db.String(255))
     amount = db.Column(db.Float, nullable=False)
     party_name = db.Column(db.String(100))
+
+class Unit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+    symbol = db.Column(db.String(10), nullable=False)
+    unit_type = db.Column(db.String(20), default='Simple')

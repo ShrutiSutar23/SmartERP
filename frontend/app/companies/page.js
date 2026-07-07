@@ -16,25 +16,16 @@ export default function Companies() {
 
   const fetchCompanies = () => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+    if (!token) { router.push("/login"); return; }
 
     fetch("http://127.0.0.1:5000/api/companies", {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setCompanies(data);
-        }
-      });
+      .then((data) => { if (Array.isArray(data)) setCompanies(data); });
   };
 
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
+  useEffect(() => { fetchCompanies(); }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -63,9 +54,7 @@ export default function Companies() {
   };
 
   const handleDelete = (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this company?");
-    if (!confirmDelete) return;
-
+    if (!window.confirm("Are you sure you want to delete this company?")) return;
     const token = localStorage.getItem("token");
     fetch("http://127.0.0.1:5000/api/companies/" + id, {
       method: "DELETE",
@@ -81,13 +70,16 @@ export default function Companies() {
   const handleSelect = (company) => {
     localStorage.setItem("selectedCompanyId", company.id);
     localStorage.setItem("selectedCompanyName", company.name);
-    router.push("/");
+    if (company.financial_year) {
+      localStorage.setItem("selectedFinancialYear", company.financial_year);
+    }
+    window.location.href = "/";
   };
 
   return (
     <AppLayout currentPage="companies">
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-4">Select or Create a Company (F1)</h1>
+        <h1 className="text-2xl font-bold mb-4">Select or Create a Company</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {companies.map((c) => (

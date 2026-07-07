@@ -6,29 +6,24 @@ import { useRouter } from "next/navigation";
 
 export default function Gateway() {
   const [companyName, setCompanyName] = useState("");
-  const [financialYear, setFinancialYear] = useState("");
+  const [financialYear, setFinancialYear] = useState("2025-26");
   const [dashboard, setDashboard] = useState(null);
   const router = useRouter();
 
-  const getAuth = () => {
-    const token = localStorage.getItem("token");
-    const companyId = localStorage.getItem("selectedCompanyId");
-    return { token, companyId };
-  };
-
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const companyId = localStorage.getItem("selectedCompanyId");
+    const cid = localStorage.getItem("selectedCompanyId");
+    const name = localStorage.getItem("selectedCompanyName");
+    const fy = localStorage.getItem("selectedFinancialYear");
 
     if (!token) { router.push("/login"); return; }
-    if (!companyId) { router.push("/companies"); return; }
+    if (!cid) { router.push("/companies"); return; }
 
-    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    setFinancialYear(localStorage.getItem("selectedFinancialYear") || "2025-26");
+    setCompanyName(name || "");
+    if (fy) setFinancialYear(fy);
 
-    const { token: t, companyId: cid } = getAuth();
     fetch("http://127.0.0.1:5000/api/dashboard?company_id=" + cid, {
-      headers: { Authorization: "Bearer " + t },
+      headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => {
@@ -101,40 +96,26 @@ export default function Gateway() {
   return (
     <AppLayout currentPage="gateway">
       <div className="min-h-screen bg-gray-200">
-
-        {/* Top bar like Tally */}
         <div className="bg-blue-900 text-white flex justify-between items-center px-4 py-1 text-xs">
           <div className="flex gap-6">
-            <span className="cursor-pointer hover:text-yellow-300"
-              onClick={() => router.push("/companies")}>
-              K: Company
-            </span>
-            <span className="cursor-pointer hover:text-yellow-300"
-              onClick={() => router.push("/reports")}>
-              Y: Data
-            </span>
+            <span className="cursor-pointer hover:text-yellow-300" onClick={() => router.push("/companies")}>K: Company</span>
+            <span className="cursor-pointer hover:text-yellow-300" onClick={() => router.push("/reports")}>Y: Data</span>
           </div>
           <div className="font-bold text-sm">{companyName}</div>
           <div className="flex gap-4">
-            <span className="cursor-pointer hover:text-yellow-300"
-              onClick={handleLogout}>
-              Ctrl+Q: Logout
-            </span>
+            <span className="cursor-pointer hover:text-yellow-300" onClick={handleLogout}>Ctrl+Q: Logout</span>
           </div>
         </div>
 
-        {/* Company header */}
         <div className="bg-blue-800 text-white text-center py-2">
           <div className="text-lg font-bold">{companyName}</div>
           <div className="text-xs text-blue-200">Financial Year: {financialYear}</div>
         </div>
 
-        {/* Gateway title */}
         <div className="bg-gray-700 text-white text-center py-1 text-sm font-bold tracking-widest">
           GATEWAY OF SMARTERP
         </div>
 
-        {/* Summary bar */}
         {dashboard && (
           <div className="bg-gray-800 text-white flex justify-around py-2 text-xs">
             <span>Total Sales: <strong className="text-green-400">Rs.{dashboard.total_sales.toFixed(2)}</strong></span>
@@ -142,20 +123,15 @@ export default function Gateway() {
             <span>Customers: <strong className="text-blue-400">{dashboard.total_customers}</strong></span>
             <span>Suppliers: <strong className="text-yellow-400">{dashboard.total_suppliers}</strong></span>
             {dashboard.low_stock_items.length > 0 && (
-              <span className="text-red-400 animate-pulse">
-                ⚠ {dashboard.low_stock_items.length} Low Stock
-              </span>
+              <span className="text-red-400 animate-pulse">⚠ {dashboard.low_stock_items.length} Low Stock</span>
             )}
           </div>
         )}
 
-        {/* Main menu grid */}
         <div className="grid grid-cols-2 gap-4 p-4">
           {menuItems.map((menu) => (
             <div key={menu.section} className={"rounded border " + menu.borderColor}>
-              <div className={"text-white text-sm font-bold px-3 py-2 " + menu.color}>
-                {menu.section}
-              </div>
+              <div className={"text-white text-sm font-bold px-3 py-2 " + menu.color}>{menu.section}</div>
               <div className={menu.lightColor}>
                 {menu.items.map((item) => (
                   <div
@@ -172,20 +148,11 @@ export default function Gateway() {
           ))}
         </div>
 
-        {/* Bottom status bar like Tally */}
         <div className="fixed bottom-0 left-0 right-44 bg-gray-700 text-white flex justify-between px-4 py-1 text-xs">
-          <span className="cursor-pointer hover:text-yellow-300"
-            onClick={handleLogout}>
-            Q: Quit
-          </span>
+          <span className="cursor-pointer hover:text-yellow-300" onClick={handleLogout}>Q: Quit</span>
           <span>SmartERP — {companyName}</span>
-          <span className="cursor-pointer hover:text-yellow-300"
-            onClick={() => router.push("/companies")}>
-            F1: Select Company
-          </span>
+          <span className="cursor-pointer hover:text-yellow-300" onClick={() => router.push("/companies")}>F1: Select Company</span>
         </div>
-
-        {/* Bottom padding so content not hidden behind status bar */}
         <div className="h-8"></div>
       </div>
     </AppLayout>

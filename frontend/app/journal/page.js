@@ -5,11 +5,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function JournalVoucher() {
+  const [companyName, setCompanyName] = useState("");
   const [vouchers, setVouchers] = useState([]);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [partyName, setPartyName] = useState("");
-  const [companyName, setCompanyName] = useState("");
+  
   const router = useRouter();
 
   const getAuth = () => {

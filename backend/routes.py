@@ -1,6 +1,7 @@
+import re
 from flask import request, jsonify, send_file
 from extensions import db
-from models import Customer, Supplier, Item, Sale, Purchase, User, Company, Voucher
+from models import Customer, Supplier, Item, Sale, Purchase, User, Company, Voucher, Unit
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from invoice_generator import generate_invoice
 
@@ -96,7 +97,7 @@ def register_routes(app):
         all_items = Item.query.all()
         output = "<h2>All Items</h2><ul>"
         for i in all_items:
-            output += f"<li>{i.name} - Price: ₹{i.price} - Qty: {i.quantity}</li>"
+            output += f"<li>{i.name} - Price: ₹{i.purchase_price} - Qty: {i.quantity}</li>"
         output += "</ul>"
         return output
 
@@ -110,7 +111,7 @@ def register_routes(app):
             customer = Customer.query.get(customer_id)
             if item.quantity < quantity:
                 return "Error: Not enough stock available!"
-            total_amount = item.price * quantity
+            total_amount = item.selling_price * quantity
             item.quantity -= quantity
             customer.balance += total_amount
             new_sale = Sale(customer_id=customer_id, item_id=item_id,
@@ -140,7 +141,7 @@ def register_routes(app):
             quantity = int(request.form["quantity"])
             item = Item.query.get(item_id)
             supplier = Supplier.query.get(supplier_id)
-            total_amount = item.price * quantity
+            total_amount = item.purchase_price * quantity
             item.quantity += quantity
             supplier.balance_due += total_amount
             new_purchase = Purchase(supplier_id=supplier_id, item_id=item_id,
@@ -338,11 +339,18 @@ def register_routes(app):
         all_items = Item.query.filter_by(company_id=company_id).all()
         result = []
         for i in all_items:
+            unit = Unit.query.get(i.unit_id) if i.unit_id else None
+            unit_symbol = (i.unit_symbol or "").strip() or (unit.symbol if unit else "") or "—"
             result.append({
                 "id": i.id,
                 "name": i.name,
-                "price": i.price,
-                "quantity": i.quantity
+                "hsn_code": i.hsn_code,
+                "unit_symbol": unit_symbol,
+                "purchase_price": i.purchase_price,
+                "selling_price": i.selling_price,
+                "price": i.selling_price,
+                "quantity": i.quantity or 0,
+                "gst_percentage": i.gst_percentage
             })
         return jsonify(result)
 
@@ -351,13 +359,47 @@ def register_routes(app):
     def api_add_item():
         data = request.get_json()
         name = data.get("name")
-        price = data.get("price")
-        quantity = data.get("quantity")
+        hsn_code = data.get("hsn_code", "")
+        unit_symbol = data.get("unit_id", "")
+        purchase_price = float(data.get("purchase_price", 0))
+        selling_price = float(data.get("selling_price", 0))
+        quantity = int(data.get("quantity", 0) or 0)
+        gst_percentage = float(data.get("gst_percentage", 0))
         company_id = data.get("company_id")
-        new_item = Item(name=name, price=float(price), quantity=int(quantity), company_id=company_id)
+
+        print("DEBUG unit_symbol received:", unit_symbol)
+        print("DEBUG all data:", data)
+
+        existing_item = Item.query.filter_by(
+            company_id=company_id,
+            name=name,
+            hsn_code=hsn_code
+        ).first()
+
+        if existing_item:
+            existing_item.purchase_price = purchase_price
+            existing_item.selling_price = selling_price
+            existing_item.gst_percentage = gst_percentage
+            existing_item.unit_symbol = unit_symbol
+            existing_item.quantity += quantity
+            db.session.commit()
+            return jsonify({"message": f"Item {name} updated! Stock: {existing_item.quantity}"})
+
+        new_item = Item(
+            name=name,
+            hsn_code=hsn_code,
+            unit_id=None,
+            unit_symbol=unit_symbol,
+            purchase_price=purchase_price,
+            selling_price=selling_price,
+            quantity=quantity,
+            gst_percentage=gst_percentage,
+            company_id=company_id
+        )
         db.session.add(new_item)
         db.session.commit()
-        return jsonify({"message": f"Item {name} added successfully!"})
+
+        return jsonify({"message": f"Item {name} ({unit_symbol}) created successfully!"})
 
     # ---------------- SALES VOUCHER ROUTES ----------------
 
@@ -376,7 +418,7 @@ def register_routes(app):
         if item.quantity < quantity:
             return jsonify({"message": "Error: Not enough stock available!"}), 400
 
-        total_amount = item.price * quantity
+        total_amount = item.selling_price * quantity
         item.quantity -= quantity
         customer.balance += total_amount
 
@@ -408,7 +450,8 @@ def register_routes(app):
                 "customer_name": customer.name if customer else "Unknown",
                 "item_name": item.name if item else "Unknown",
                 "quantity": s.quantity,
-                "total_amount": s.total_amount
+                "total_amount": s.total_amount,
+                "date": s.date.strftime("%d-%m-%Y") if s.date else "N/A"
             })
         return jsonify(result)
 
@@ -426,7 +469,7 @@ def register_routes(app):
         item = Item.query.get(item_id)
         supplier = Supplier.query.get(supplier_id)
 
-        total_amount = item.price * quantity
+        total_amount = item.purchase_price * quantity
         item.quantity += quantity
         supplier.balance_due += total_amount
 
@@ -458,7 +501,8 @@ def register_routes(app):
                 "supplier_name": supplier.name if supplier else "Unknown",
                 "item_name": item.name if item else "Unknown",
                 "quantity": p.quantity,
-                "total_amount": p.total_amount
+                "total_amount": p.total_amount,
+                "date": p.date.strftime("%d-%m-%Y") if p.date else "N/A"
             })
         return jsonify(result)
 
@@ -603,9 +647,9 @@ def register_routes(app):
             result.append({
                 "id": i.id,
                 "name": i.name,
-                "price": i.price,
+                "price": i.selling_price,
                 "quantity": i.quantity,
-                "stock_value": i.price * i.quantity,
+                "stock_value": i.selling_price * i.quantity,
                 "status": "Low Stock" if i.quantity < 10 else "OK"
             })
         total_stock_value = sum([i["stock_value"] for i in result])
@@ -654,7 +698,7 @@ def register_routes(app):
                 {
                     "name": item.name,
                     "quantity": sale.quantity,
-                    "price": item.price,
+                    "price": item.selling_price,
                     "total": sale.total_amount
                 }
             ],
@@ -669,7 +713,9 @@ def register_routes(app):
             as_attachment=True,
             download_name=f"Invoice_{sale.id}.pdf"
         )
-    
+
+    # ---------------- STOCK SUMMARY ROUTE ----------------
+
     @app.route("/api/stock_summary")
     @jwt_required()
     def stock_summary():
@@ -696,7 +742,8 @@ def register_routes(app):
 
             result.append({
                 "name": item.name,
-                "price": item.price,
+                "purchase_price": item.purchase_price,
+                "selling_price": item.selling_price,
                 "inwards": total_purchased,
                 "outwards": total_sold,
                 "closing": item.quantity,
@@ -705,3 +752,48 @@ def register_routes(app):
             })
 
         return jsonify(result)
+
+    # ---------------- UNIT ROUTES ----------------
+
+    @app.route("/api/units")
+    @jwt_required()
+    def get_units():
+        company_id = request.args.get("company_id")
+        all_units = Unit.query.filter_by(company_id=company_id).all()
+        result = []
+        for u in all_units:
+            result.append({
+                "id": u.id,
+                "name": u.name,
+                "symbol": u.symbol,
+                "unit_type": u.unit_type
+            })
+        return jsonify(result)
+
+    @app.route("/api/add_unit", methods=["POST"])
+    @jwt_required()
+    def add_unit():
+        data = request.get_json(silent=True) or {}
+        company_id = data.get("company_id")
+        name = (data.get("name") or "").strip()
+        symbol = (data.get("symbol") or "").strip()
+        unit_type = data.get("unit_type", "Simple")
+
+        if not name or not symbol:
+            return jsonify({"message": "Unit name and symbol are required"}), 400
+
+        existing = Unit.query.filter_by(
+            company_id=company_id, symbol=symbol
+        ).first()
+        if existing:
+            return jsonify({"message": f"Unit {symbol} already exists"}), 400
+
+        new_unit = Unit(
+            company_id=company_id,
+            name=name,
+            symbol=symbol,
+            unit_type=unit_type
+        )
+        db.session.add(new_unit)
+        db.session.commit()
+        return jsonify({"message": f"Unit {name} ({symbol}) created successfully!"})

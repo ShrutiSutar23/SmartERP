@@ -1,55 +1,49 @@
 "use client";
 
 import AppLayout from "../components/AppLayout";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function PaymentVoucher() {
+  const [companyName, setCompanyName] = useState(""); 
   const [vouchers, setVouchers] = useState([]);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [partyName, setPartyName] = useState("");
-  const [companyName, setCompanyName] = useState("");
   const router = useRouter();
 
-  const getAuth = () => {
-    const token = localStorage.getItem("token");
-    const companyId = localStorage.getItem("selectedCompanyId");
-    return { token, companyId };
-  };
-
   const fetchVouchers = () => {
-    const { token, companyId } = getAuth();
+    const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
     if (!companyId) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/vouchers?company_id=" + companyId + "&type=Payment", {
+    fetch(`http://127.0.0.1:5000/api/vouchers?company_id=${companyId}&type=Payment`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setVouchers(data); });
   };
 
+  // ✅ re-fetch whenever companyId changes
   useEffect(() => {
     setCompanyName(localStorage.getItem("selectedCompanyName") || "");
-    fetchVouchers();
-  }, []);
+    if (companyId) fetchVouchers();
+  }, [companyId]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { token, companyId } = getAuth();
+    const token = localStorage.getItem("token");
+    if (!token || !companyId) return;
 
     fetch("http://127.0.0.1:5000/api/voucher", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({
         company_id: companyId,
         voucher_type: "Payment",
-        description: description,
-        amount: amount,
+        description,
+        amount,
         party_name: partyName,
       }),
     })
@@ -59,45 +53,41 @@ export default function PaymentVoucher() {
         setDescription("");
         setAmount("");
         setPartyName("");
-        fetchVouchers();
+        fetchVouchers(); // ✅ refresh list after save
       });
   };
 
   return (
     <AppLayout currentPage="payment">
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-2">Payment Voucher (Ctrl+B)</h1>
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-2xl font-bold">Payment Voucher</h1>
+          <button
+            onClick={() => router.push("/")}
+            className="bg-gray-600 text-white px-3 py-1 rounded text-sm"
+          >
+            ESC: Gateway
+          </button>
+        </div>
+
         <p className="text-gray-500 mb-4">
           Company: {companyName}{" "}
           <a href="/companies" className="text-blue-600 underline">(Switch)</a>
         </p>
 
-        <div className="flex gap-4 mb-4 flex-wrap">
-          <a href="/" className="text-blue-600 underline">Dashboard</a>
-          <a href="/suppliers" className="text-blue-600 underline">Suppliers</a>
-          <a href="/items" className="text-blue-600 underline">Items</a>
-          <a href="/sales" className="text-blue-600 underline">Sales Voucher</a>
-          <a href="/purchases" className="text-blue-600 underline">Purchase Voucher</a>
-          <a href="/payment" className="text-blue-600 underline">Payment</a>
-          <a href="/receipt" className="text-blue-600 underline">Receipt</a>
-          <a href="/journal" className="text-blue-600 underline">Journal</a>
-          <a href="/contra" className="text-blue-600 underline">Contra</a>
-          <a href="/reports" className="text-blue-600 underline">Reports</a>
-        </div>
-
         <div className="bg-red-50 border border-red-200 p-4 rounded mb-6">
-          <h2 className="text-lg font-bold mb-3 text-red-700">Create Payment Voucher</h2>
+          <h2 className="font-bold text-red-700 mb-3">Create Payment</h2>
           <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap">
             <input
               type="text"
-              placeholder="Party Name (e.g. Landlord)"
+              placeholder="Party Name"
               value={partyName}
               onChange={(e) => setPartyName(e.target.value)}
               className="border border-gray-300 p-2 rounded"
             />
             <input
               type="text"
-              placeholder="Description (e.g. Monthly Rent)"
+              placeholder="Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="border border-gray-300 p-2 rounded"
@@ -117,7 +107,6 @@ export default function PaymentVoucher() {
           </form>
         </div>
 
-        <h2 className="text-xl font-bold mb-2">Payment History</h2>
         <table className="w-full border-collapse border border-gray-300">
           <thead>
             <tr className="bg-red-100">
@@ -131,7 +120,7 @@ export default function PaymentVoucher() {
               <tr key={v.id} className="bg-red-50">
                 <td className="border border-gray-300 p-2">{v.party_name}</td>
                 <td className="border border-gray-300 p-2">{v.description}</td>
-                <td className="border border-gray-300 p-2">Rs.{v.amount}</td>
+                <td className="border border-gray-300 p-2 text-center">Rs.{v.amount}</td>
               </tr>
             ))}
           </tbody>
