@@ -23,7 +23,7 @@ export default function Gateway() {
     setCompanyName(name || "");
     if (fy) setFinancialYear(fy);
 
-    fetch("http://127.0.0.1:5000/api/dashboard?company_id=" + cid, {
+    fetch("API_URL/api/dashboard?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())

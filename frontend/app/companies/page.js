@@ -33,7 +33,7 @@ export default function Companies() {
     e.preventDefault();
     const token = localStorage.getItem("token");
 
-    fetch("http://127.0.0.1:5000/api/companies", {
+    fetch("API_URL/api/companies", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -58,7 +58,7 @@ export default function Companies() {
   const handleDelete = (id) => {
     if (!window.confirm("Are you sure you want to delete this company?")) return;
     const token = localStorage.getItem("token");
-    fetch("http://127.0.0.1:5000/api/companies/" + id, {
+    fetch("API_URL/api/companies/" + id, {
       method: "DELETE",
       headers: { Authorization: "Bearer " + token },
     })
