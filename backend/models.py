@@ -46,6 +46,8 @@ class Sale(db.Model):
     item_id = db.Column(db.Integer, db.ForeignKey('item.id'))
     quantity = db.Column(db.Integer, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(50), default='Unpaid')
+    payment_status = db.Column(db.String(20), default='Unpaid')
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Purchase(db.Model):
@@ -55,6 +57,8 @@ class Purchase(db.Model):
     item_id = db.Column(db.Integer, db.ForeignKey('item.id'))
     quantity = db.Column(db.Integer, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(50), default='Unpaid')
+    payment_status = db.Column(db.String(20), default='Unpaid')
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Company(db.Model):

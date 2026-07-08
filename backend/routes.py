@@ -411,6 +411,7 @@ def register_routes(app):
         customer_id = int(data.get("customer_id"))
         item_id = int(data.get("item_id"))
         quantity = int(data.get("quantity"))
+        payment_method = data.get("payment_method") or "Unpaid"
 
         item = Item.query.get(item_id)
         customer = Customer.query.get(customer_id)
@@ -420,27 +421,47 @@ def register_routes(app):
 
         total_amount = item.selling_price * quantity
         item.quantity -= quantity
-        customer.balance += total_amount
+
+        is_paid = payment_method != "Unpaid"
+        payment_status = "Paid" if is_paid else "Unpaid"
+
+        if not is_paid:
+            customer.balance += total_amount
 
         new_sale = Sale(
             company_id=company_id,
             customer_id=customer_id,
             item_id=item_id,
             quantity=quantity,
-            total_amount=total_amount
+            total_amount=total_amount,
+            payment_status=payment_status,
+            payment_method=payment_method
         )
         db.session.add(new_sale)
+
+        if is_paid:
+            new_receipt = Voucher(
+                company_id=company_id,
+                voucher_type="Receipt",
+                description=f"Receipt for sale of {quantity} x {item.name} ({payment_method})",
+                amount=total_amount,
+                party_name=customer.name
+            )
+            db.session.add(new_receipt)
+
         db.session.commit()
 
         return jsonify({
-            "message": f"Sale recorded! {quantity} x {item.name} sold to {customer.name}. Total: ₹{total_amount}"
+            "message": f"Sale recorded! {quantity} x {item.name} sold to {customer.name}. Total: ₹{total_amount}" +
+                       (f" — Received via {payment_method}" if is_paid else " — Marked as Unpaid/Credit")
         })
+    
 
     @app.route("/api/sales_history")
     @jwt_required()
     def api_sales_history():
         company_id = request.args.get("company_id")
-        all_sales = Sale.query.filter_by(company_id=company_id).all()
+        all_sales = Sale.query.filter_by(company_id=company_id).order_by(Sale.date.desc()).all()
         result = []
         for s in all_sales:
             customer = Customer.query.get(s.customer_id)
@@ -451,6 +472,8 @@ def register_routes(app):
                 "item_name": item.name if item else "Unknown",
                 "quantity": s.quantity,
                 "total_amount": s.total_amount,
+                "payment_method": s.payment_method,
+                "payment_status": s.payment_status,
                 "date": s.date.strftime("%d-%m-%Y") if s.date else "N/A"
             })
         return jsonify(result)
@@ -465,33 +488,54 @@ def register_routes(app):
         supplier_id = int(data.get("supplier_id"))
         item_id = int(data.get("item_id"))
         quantity = int(data.get("quantity"))
+        payment_method = data.get("payment_method") or "Unpaid"
 
         item = Item.query.get(item_id)
         supplier = Supplier.query.get(supplier_id)
 
         total_amount = item.purchase_price * quantity
         item.quantity += quantity
-        supplier.balance_due += total_amount
+
+        is_paid = payment_method != "Unpaid"
+        payment_status = "Paid" if is_paid else "Unpaid"
+
+        if not is_paid:
+            supplier.balance_due += total_amount
 
         new_purchase = Purchase(
             company_id=company_id,
             supplier_id=supplier_id,
             item_id=item_id,
             quantity=quantity,
-            total_amount=total_amount
+            total_amount=total_amount,
+            payment_status=payment_status,
+            payment_method=payment_method
         )
         db.session.add(new_purchase)
+
+        if is_paid:
+            new_payment = Voucher(
+                company_id=company_id,
+                voucher_type="Payment",
+                description=f"Payment for purchase of {quantity} x {item.name} ({payment_method})",
+                amount=total_amount,
+                party_name=supplier.name
+            )
+            db.session.add(new_payment)
+
         db.session.commit()
 
         return jsonify({
-            "message": f"Purchase recorded! {quantity} x {item.name} bought from {supplier.name}. Total: ₹{total_amount}"
+            "message": f"Purchase recorded! {quantity} x {item.name} bought from {supplier.name}. Total: ₹{total_amount}" +
+                       (f" — Paid via {payment_method}" if is_paid else " — Marked as Unpaid/Credit")
         })
+    
 
     @app.route("/api/purchase_history")
     @jwt_required()
     def api_purchase_history():
         company_id = request.args.get("company_id")
-        all_purchases = Purchase.query.filter_by(company_id=company_id).all()
+        all_purchases = Purchase.query.filter_by(company_id=company_id).order_by(Purchase.date.desc()).all()
         result = []
         for p in all_purchases:
             supplier = Supplier.query.get(p.supplier_id)
@@ -502,9 +546,12 @@ def register_routes(app):
                 "item_name": item.name if item else "Unknown",
                 "quantity": p.quantity,
                 "total_amount": p.total_amount,
+                "payment_method": p.payment_method,
+                "payment_status": p.payment_status,
                 "date": p.date.strftime("%d-%m-%Y") if p.date else "N/A"
             })
         return jsonify(result)
+
 
     # ---------------- VOUCHER ROUTES ----------------
 
