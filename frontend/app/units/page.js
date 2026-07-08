@@ -1,5 +1,6 @@
 "use client";
 
+import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -18,7 +19,7 @@ export default function Units() {
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/units?company_id=" + cid, {
+    fetch("API_URL/api/units?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -35,7 +36,7 @@ export default function Units() {
     const token = localStorage.getItem("token");
     const cid = localStorage.getItem("selectedCompanyId");
 
-    fetch("http://127.0.0.1:5000/api/add_unit", {
+    fetch("API_URL/api/add_unit", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -71,7 +72,7 @@ export default function Units() {
     const token = localStorage.getItem("token");
     const cid = localStorage.getItem("selectedCompanyId");
 
-    fetch("http://127.0.0.1:5000/api/add_unit", {
+    fetch("API_URL/api/add_unit", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

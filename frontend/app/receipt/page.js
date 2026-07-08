@@ -1,10 +1,12 @@
 "use client";
 
+import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const API_BASE = "http://127.0.0.1:5000/api";
+
+const API_BASE = "API_URL/api";
 
 export default function ReceiptVoucher() {
   const [companyId, setCompanyId] = useState(null);

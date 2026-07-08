@@ -1,7 +1,9 @@
 "use client";
 
+import API_URL from "../config";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -11,7 +13,7 @@ export default function Signup() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    fetch("http://127.0.0.1:5000/api/signup", {
+    fetch("API_URL/api/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email, password: password }),

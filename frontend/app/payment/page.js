@@ -1,8 +1,10 @@
 "use client";
 
+import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
 
 export default function PaymentVoucher() {
   const [companyName, setCompanyName] = useState("");
@@ -18,7 +20,7 @@ export default function PaymentVoucher() {
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/vouchers?company_id=" + cid + "&type=Payment", {
+    fetch("API_URL/api/vouchers?company_id=" + cid + "&type=Payment", {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -35,7 +37,7 @@ export default function PaymentVoucher() {
     const token = localStorage.getItem("token");
     const cid = localStorage.getItem("selectedCompanyId");
 
-    fetch("http://127.0.0.1:5000/api/voucher", {
+    fetch("API_URL/api/voucher", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({

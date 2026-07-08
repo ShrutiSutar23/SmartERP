@@ -1,8 +1,10 @@
 "use client";
 
+import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
 
 export default function Companies() {
   const [companies, setCompanies] = useState([]);
@@ -18,7 +20,7 @@ export default function Companies() {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
 
-    fetch("http://127.0.0.1:5000/api/companies", {
+    fetch("API_URL/api/companies", {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())

@@ -1,5 +1,6 @@
 "use client";
 
+import API_URL from "../config";
 import KeyboardShortcuts from "./KeyboardShortcuts";
 import ShortcutPanel from "./ShortcutPanel";
 

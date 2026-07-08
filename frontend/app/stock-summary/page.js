@@ -1,8 +1,10 @@
 "use client";
 
+import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
 
 export default function StockSummary() {
   const [companyName, setCompanyName] = useState("");
@@ -19,7 +21,7 @@ export default function StockSummary() {
 
     setCompanyName(name || "");
 
-    fetch("http://127.0.0.1:5000/api/stock_summary?company_id=" + cid, {
+    fetch("API_URL/api/stock_summary?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())

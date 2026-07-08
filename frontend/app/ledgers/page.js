@@ -1,8 +1,10 @@
 "use client";
 
+import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
 
 export default function Ledgers() {
   const [customers, setCustomers] = useState([]);
@@ -25,13 +27,13 @@ export default function Ledgers() {
     if (!token) { router.push("/login"); return; }
     if (!companyId) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/customers?company_id=" + companyId, {
+    fetch("API_URL/api/customers?company_id=" + companyId, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setCustomers(data); });
 
-    fetch("http://127.0.0.1:5000/api/suppliers?company_id=" + companyId, {
+    fetch("API_URL/api/suppliers?company_id=" + companyId, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -48,8 +50,8 @@ export default function Ledgers() {
     const { token, companyId } = getAuth();
 
     const url = ledgerType === "Customer"
-      ? "http://127.0.0.1:5000/api/add_customer"
-      : "http://127.0.0.1:5000/api/add_supplier";
+      ? "API_URL/api/add_customer"
+      : "API_URL/api/add_supplier";
 
     fetch(url, {
       method: "POST",

@@ -1,13 +1,12 @@
 "use client";
 
+import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const API_BASE = "http://127.0.0.1:5000/api";
 
 export default function PurchaseVoucher() {
-  const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [suppliers, setSuppliers] = useState([]);
   const [items, setItems] = useState([]);
@@ -15,59 +14,44 @@ export default function PurchaseVoucher() {
   const [supplierId, setSupplierId] = useState("");
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [isPaid, setIsPaid] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [voucherDate, setVoucherDate] = useState(new Date().toISOString().split("T")[0]);
   const [newSupplierName, setNewSupplierName] = useState("");
   const [newSupplierPhone, setNewSupplierPhone] = useState("");
   const router = useRouter();
 
-  const fetchAll = (cid) => {
-    const token = localStorage.getItem("token");
+  const getToken = () => localStorage.getItem("token");
+  const getCid = () => localStorage.getItem("selectedCompanyId");
+
+  const fetchAll = () => {
+    const token = getToken();
+    const cid = getCid();
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch(`${API_BASE}/suppliers?company_id=${cid}`, {
+    fetch("API_URL/api/suppliers?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setSuppliers(data); })
-      .catch((error) => {
-        console.error("Failed to load suppliers", error);
-        alert("Unable to connect to the server. Please make sure the backend is running.");
-      });
+      .then((data) => { if (Array.isArray(data)) setSuppliers(data); });
 
-    fetch(`${API_BASE}/items?company_id=${cid}`, {
+    fetch("API_URL/api/items?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setItems(data); })
-      .catch((error) => {
-        console.error("Failed to load items", error);
-        alert("Unable to connect to the server. Please make sure the backend is running.");
-      });
+      .then((data) => { if (Array.isArray(data)) setItems(data); });
 
-    fetch(`${API_BASE}/purchase_history?company_id=${cid}`, {
+    fetch("API_URL/api/purchase_history?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setPurchases(data); })
-      .catch((error) => {
-        console.error("Failed to load purchase history", error);
-        alert("Unable to connect to the server. Please make sure the backend is running.");
-      });
+      .then((data) => { if (Array.isArray(data)) setPurchases(data); });
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const cid = localStorage.getItem("selectedCompanyId");
-    const cname = localStorage.getItem("selectedCompanyName") || "";
-
-    if (!token) { router.push("/login"); return; }
-    if (!cid) { router.push("/companies"); return; }
-
-    setCompanyId(cid);
-    setCompanyName(cname);
-    fetchAll(cid);
-
+    setCompanyName(localStorage.getItem("selectedCompanyName") || "");
+    fetchAll();
     const handleF2 = (e) => {
       if (e.key === "F2") {
         e.preventDefault();
@@ -80,36 +64,42 @@ export default function PurchaseVoucher() {
 
   const handleAddSupplier = (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    fetch(`${API_BASE}/add_supplier`, {
+    const token = getToken();
+    const cid = getCid();
+    fetch("API_URL/api/add_supplier", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify({ name: newSupplierName, phone: newSupplierPhone, company_id: companyId }),
+      body: JSON.stringify({ name: newSupplierName, phone: newSupplierPhone, company_id: cid }),
     })
       .then((res) => res.json())
       .then((data) => {
         alert(data.message);
         setNewSupplierName("");
         setNewSupplierPhone("");
-        fetchAll(companyId);
-      })
-      .catch((error) => {
-        console.error("Failed to add supplier", error);
-        alert("Unable to connect to the server. Please make sure the backend is running.");
+        fetchAll();
       });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    fetch(`${API_BASE}/purchase_voucher`, {
+    const token = getToken();
+    const cid = getCid();
+
+    const finalPaymentMethod = isPaid ? paymentMethod : "Unpaid";
+
+    console.log("isPaid:", isPaid);
+    console.log("paymentMethod:", paymentMethod);
+    console.log("finalPaymentMethod:", finalPaymentMethod);
+
+    fetch("API_URL/api/purchase_voucher", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({
         supplier_id: supplierId,
         item_id: itemId,
         quantity: quantity,
-        company_id: companyId,
+        payment_method: finalPaymentMethod,
+        company_id: cid,
       }),
     })
       .then((res) => res.json())
@@ -118,11 +108,9 @@ export default function PurchaseVoucher() {
         setSupplierId("");
         setItemId("");
         setQuantity("");
-        fetchAll(companyId);
-      })
-      .catch((error) => {
-        console.error("Failed to create purchase", error);
-        alert("Unable to connect to the server. Please make sure the backend is running.");
+        setIsPaid(false);
+        setPaymentMethod("Cash");
+        fetchAll();
       });
   };
 
@@ -182,9 +170,9 @@ export default function PurchaseVoucher() {
             </form>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap">
+          <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap items-end">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Select Existing Supplier</p>
+              <p className="text-xs text-gray-500 mb-1">Select Supplier</p>
               <select
                 value={supplierId}
                 onChange={(e) => setSupplierId(e.target.value)}
@@ -197,6 +185,7 @@ export default function PurchaseVoucher() {
                 ))}
               </select>
             </div>
+
             <div>
               <p className="text-xs text-gray-500 mb-1">Select Item</p>
               <select
@@ -211,23 +200,55 @@ export default function PurchaseVoucher() {
                 ))}
               </select>
             </div>
+
             <div>
               <p className="text-xs text-gray-500 mb-1">Quantity</p>
               <input
-                type="text"
+                type="number"
                 placeholder="Qty"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 className="border border-gray-300 p-2 rounded w-24"
                 required
+                min="1"
               />
             </div>
-            <div className="flex items-end">
+
+            <div className="flex flex-col">
+              <p className="text-xs text-gray-500 mb-1">Payment</p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPaid}
+                  onChange={(e) => setIsPaid(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-semibold">Mark as Paid</span>
+              </label>
+            </div>
+
+            {isPaid && (
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Payment Method</p>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="border border-gray-300 p-2 rounded"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Card">Card</option>
+                </select>
+              </div>
+            )}
+
+            <div>
               <button
                 type="submit"
                 className="bg-green-600 text-white px-4 py-2 rounded"
               >
-                Create Purchase (Enter)
+                Create Purchase
               </button>
             </div>
           </form>
@@ -242,6 +263,8 @@ export default function PurchaseVoucher() {
               <th className="border border-gray-300 p-2">Item</th>
               <th className="border border-gray-300 p-2">Qty</th>
               <th className="border border-gray-300 p-2">Total</th>
+              <th className="border border-gray-300 p-2">Method</th>
+              <th className="border border-gray-300 p-2">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -252,6 +275,17 @@ export default function PurchaseVoucher() {
                 <td className="border border-gray-300 p-2">{p.item_name}</td>
                 <td className="border border-gray-300 p-2 text-center">{p.quantity}</td>
                 <td className="border border-gray-300 p-2 text-center">Rs.{p.total_amount}</td>
+                <td className="border border-gray-300 p-2 text-center">{p.payment_method || "-"}</td>
+                <td className="border border-gray-300 p-2 text-center">
+                  <span className={
+                    "px-2 py-1 rounded text-xs font-bold " +
+                    (p.payment_status === "Paid"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700")
+                  }>
+                    {p.payment_status || "Unpaid"}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -1,8 +1,10 @@
 "use client";
 
+import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
 
 export default function Items() {
   const [companyName, setCompanyName] = useState("");
@@ -22,7 +24,7 @@ export default function Items() {
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch("http://127.0.0.1:5000/api/items?company_id=" + cid, {
+    fetch("API_URL/api/items?company_id=" + cid, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -45,7 +47,7 @@ export default function Items() {
 
     console.log("Submitting unit:", unitSymbol);
 
-    fetch("http://127.0.0.1:5000/api/add_item", {
+    fetch("API_URL/api/add_item", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
