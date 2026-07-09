@@ -69,12 +69,12 @@ export default function Companies() {
   };
 
   const handleSelect = (company) => {
-    localStorage.setItem("selectedCompanyId", company.id);
-    localStorage.setItem("selectedCompanyName", company.name);
-    if (company.financial_year) {
-      localStorage.setItem("selectedFinancialYear", company.financial_year);
-    }
-    window.location.href = "/";
+  localStorage.setItem("selectedCompanyId", String(company.id));
+  localStorage.setItem("selectedCompanyName", company.name);
+  if (company.financial_year) {
+    localStorage.setItem("selectedFinancialYear", company.financial_year);
+  }
+  window.location.replace("/");
   };
 
   return (
