@@ -5,7 +5,6 @@ import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-
 export default function Ledgers() {
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -27,13 +26,13 @@ export default function Ledgers() {
     if (!token) { router.push("/login"); return; }
     if (!companyId) { router.push("/companies"); return; }
 
-    fetch("API_URL/api/customers?company_id=" + companyId, {
+    fetch(`${API_URL}/api/customers?company_id=${companyId}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setCustomers(data); });
 
-    fetch("API_URL/api/suppliers?company_id=" + companyId, {
+    fetch(`${API_URL}/api/suppliers?company_id=${companyId}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -50,8 +49,8 @@ export default function Ledgers() {
     const { token, companyId } = getAuth();
 
     const url = ledgerType === "Customer"
-      ? "API_URL/api/add_customer"
-      : "API_URL/api/add_supplier";
+      ? `${API_URL}/api/add_customer`
+      : `${API_URL}/api/add_supplier`;
 
     fetch(url, {
       method: "POST",
@@ -92,7 +91,6 @@ export default function Ledgers() {
           <a href="/companies" className="text-blue-600 underline">(Switch)</a>
         </p>
 
-        {/* Create Ledger Form */}
         <div className="bg-blue-50 border border-blue-200 p-4 rounded mb-6">
           <h2 className="font-bold text-blue-800 mb-3">Create Ledger (Alt+L)</h2>
           <form onSubmit={handleSubmit} className="flex gap-2 flex-wrap items-end">
@@ -137,7 +135,6 @@ export default function Ledgers() {
           </form>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-1 mb-0">
           <button className={tabClass("customers")}
             onClick={() => setActiveTab("customers")}>
@@ -149,7 +146,6 @@ export default function Ledgers() {
           </button>
         </div>
 
-        {/* Customer Ledgers */}
         {activeTab === "customers" && (
           <table className="w-full border-collapse border border-gray-300">
             <thead>
@@ -181,7 +177,6 @@ export default function Ledgers() {
           </table>
         )}
 
-        {/* Supplier Ledgers */}
         {activeTab === "suppliers" && (
           <table className="w-full border-collapse border border-gray-300">
             <thead>

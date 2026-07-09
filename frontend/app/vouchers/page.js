@@ -5,7 +5,7 @@ import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const API_BASE = "API_URL/api";
+const API_BASE = `${API_URL}/api`;
 
 export default function Vouchers() {
   const [companyId, setCompanyId] = useState(null);

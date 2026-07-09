@@ -5,14 +5,13 @@ import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-
 export default function JournalVoucher() {
   const [companyName, setCompanyName] = useState("");
   const [vouchers, setVouchers] = useState([]);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [partyName, setPartyName] = useState("");
-  
+
   const router = useRouter();
 
   const getAuth = () => {
@@ -26,7 +25,7 @@ export default function JournalVoucher() {
     if (!token) { router.push("/login"); return; }
     if (!companyId) { router.push("/companies"); return; }
 
-    fetch("API_URL/api/vouchers?company_id=" + companyId + "&type=Journal", {
+    fetch(`${API_URL}/api/vouchers?company_id=${companyId}&type=Journal`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -42,7 +41,7 @@ export default function JournalVoucher() {
     e.preventDefault();
     const { token, companyId } = getAuth();
 
-    fetch("API_URL/api/voucher", {
+    fetch(`${API_URL}/api/voucher`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

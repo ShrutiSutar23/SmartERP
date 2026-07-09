@@ -6,8 +6,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-
-const API_BASE = "API_URL/api";
+const API_BASE = `${API_URL}/api`;
 
 export default function ContraVoucher() {
   const [companyId, setCompanyId] = useState(null);

@@ -5,7 +5,6 @@ import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-
 export default function StockSummary() {
   const [companyName, setCompanyName] = useState("");
   const [stocks, setStocks] = useState([]);
@@ -21,7 +20,7 @@ export default function StockSummary() {
 
     setCompanyName(name || "");
 
-    fetch("API_URL/api/stock_summary?company_id=" + cid, {
+    fetch(`${API_URL}/api/stock_summary?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())

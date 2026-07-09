@@ -5,7 +5,6 @@ import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-
 export default function Companies() {
   const [companies, setCompanies] = useState([]);
   const [name, setName] = useState("");
@@ -20,7 +19,7 @@ export default function Companies() {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
 
-    fetch("API_URL/api/companies", {
+    fetch(`${API_URL}/api/companies`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -33,7 +32,7 @@ export default function Companies() {
     e.preventDefault();
     const token = localStorage.getItem("token");
 
-    fetch("API_URL/api/companies", {
+    fetch(`${API_URL}/api/companies`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -58,7 +57,7 @@ export default function Companies() {
   const handleDelete = (id) => {
     if (!window.confirm("Are you sure you want to delete this company?")) return;
     const token = localStorage.getItem("token");
-    fetch("API_URL/api/companies/" + id, {
+    fetch(`${API_URL}/api/companies/${id}`, {
       method: "DELETE",
       headers: { Authorization: "Bearer " + token },
     })

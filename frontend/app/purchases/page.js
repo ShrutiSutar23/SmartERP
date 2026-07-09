@@ -5,7 +5,6 @@ import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-
 export default function PurchaseVoucher() {
   const [companyName, setCompanyName] = useState("");
   const [suppliers, setSuppliers] = useState([]);
@@ -30,19 +29,19 @@ export default function PurchaseVoucher() {
     if (!token) { router.push("/login"); return; }
     if (!cid) { router.push("/companies"); return; }
 
-    fetch("API_URL/api/suppliers?company_id=" + cid, {
+    fetch(`${API_URL}/api/suppliers?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setSuppliers(data); });
 
-    fetch("API_URL/api/items?company_id=" + cid, {
+    fetch(`${API_URL}/api/items?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setItems(data); });
 
-    fetch("API_URL/api/purchase_history?company_id=" + cid, {
+    fetch(`${API_URL}/api/purchase_history?company_id=${cid}`, {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
@@ -66,7 +65,7 @@ export default function PurchaseVoucher() {
     e.preventDefault();
     const token = getToken();
     const cid = getCid();
-    fetch("API_URL/api/add_supplier", {
+    fetch(`${API_URL}/api/add_supplier`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({ name: newSupplierName, phone: newSupplierPhone, company_id: cid }),
@@ -87,11 +86,7 @@ export default function PurchaseVoucher() {
 
     const finalPaymentMethod = isPaid ? paymentMethod : "Unpaid";
 
-    console.log("isPaid:", isPaid);
-    console.log("paymentMethod:", paymentMethod);
-    console.log("finalPaymentMethod:", finalPaymentMethod);
-
-    fetch("API_URL/api/purchase_voucher", {
+    fetch(`${API_URL}/api/purchase_voucher`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       body: JSON.stringify({
