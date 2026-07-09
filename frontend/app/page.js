@@ -1,6 +1,6 @@
 "use client";
 
-import API_URL from "../config";
+import API_URL from "./config";
 import AppLayout from "./components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
