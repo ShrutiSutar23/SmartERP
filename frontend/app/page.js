@@ -15,21 +15,22 @@ export default function Gateway() {
     const token = localStorage.getItem("token");
     const cid = localStorage.getItem("selectedCompanyId");
     const name = localStorage.getItem("selectedCompanyName");
-    const fy = localStorage.getItem("selectedFinancialYear");
 
-    if (!token) { router.push("/login"); return; }
-    if (!cid) { router.push("/companies"); return; }
+    console.log("token:", token);
+    console.log("cid:", cid);
+    console.log("name:", name);
 
-    setCompanyName(name || "");
-    if (fy) setFinancialYear(fy);
-
-    fetch(API_URL + "/api/dashboard?company_id=" + cid, {
-      headers: { Authorization: "Bearer " + token },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.total_sales !== undefined) setDashboard(data);
-      });
+    if (!token) { 
+      console.log("No token - going to login");
+      router.push("/login"); 
+      return; 
+    }
+    if (!cid) { 
+      console.log("No company - going to companies");
+      router.push("/companies"); 
+      return; 
+    }
+    // rest of code...
   }, []);
 
   const handleLogout = () => {
