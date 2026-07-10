@@ -1,9 +1,9 @@
 "use client";
 
-import API_URL from "../config";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+const API_URL = "https://smarterp-q4x1.onrender.com";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -22,11 +22,14 @@ export default function Login() {
       .then((data) => {
         if (data.token) {
           localStorage.setItem("token", data.token);
-          alert("Login successful!");
           router.push("/companies");
         } else {
           alert(data.message);
         }
+      })
+      .catch((err) => {
+        alert("Connection error. Please try again.");
+        console.error(err);
       });
   };
 
@@ -58,7 +61,8 @@ export default function Login() {
         </button>
       </form>
       <p className="mt-3">
-        No account? <a href="/signup" className="text-blue-600">Sign up here</a>
+        No account?{" "}
+        <a href="/signup" className="text-blue-600">Sign up here</a>
       </p>
     </div>
   );

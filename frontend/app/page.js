@@ -1,9 +1,10 @@
 "use client";
 
-import API_URL from "./config";
 import AppLayout from "./components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+const API_URL = "https://smarterp-q4x1.onrender.com";
 
 export default function Gateway() {
   const [companyName, setCompanyName] = useState("");
@@ -30,7 +31,7 @@ export default function Gateway() {
       .then((data) => {
         if (data.total_sales !== undefined) setDashboard(data);
       })
-      .catch((err) => console.error("Dashboard fetch error:", err));
+      .catch((err) => console.error("Dashboard error:", err));
   }, []);
 
   const handleLogout = () => {

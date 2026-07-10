@@ -1,9 +1,10 @@
 "use client";
 
-import API_URL from "../config";
 import AppLayout from "../components/AppLayout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+const API_URL = "https://smarterp-q4x1.onrender.com";
 
 export default function Companies() {
   const [companies, setCompanies] = useState([]);
@@ -23,7 +24,8 @@ export default function Companies() {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
-      .then((data) => { if (Array.isArray(data)) setCompanies(data); });
+      .then((data) => { if (Array.isArray(data)) setCompanies(data); })
+      .catch((err) => console.error("Failed to fetch companies:", err));
   };
 
   useEffect(() => { fetchCompanies(); }, []);
@@ -57,7 +59,7 @@ export default function Companies() {
   const handleDelete = (id) => {
     if (!window.confirm("Are you sure you want to delete this company?")) return;
     const token = localStorage.getItem("token");
-    fetch(API_URL+ "/api/companies/${id}", {
+    fetch(API_URL + "/api/companies/" + id, {
       method: "DELETE",
       headers: { Authorization: "Bearer " + token },
     })
@@ -69,12 +71,12 @@ export default function Companies() {
   };
 
   const handleSelect = (company) => {
-  localStorage.setItem("selectedCompanyId", String(company.id));
-  localStorage.setItem("selectedCompanyName", company.name);
-  if (company.financial_year) {
-    localStorage.setItem("selectedFinancialYear", company.financial_year);
-  }
-  window.location.replace("/");
+    localStorage.setItem("selectedCompanyId", String(company.id));
+    localStorage.setItem("selectedCompanyName", company.name);
+    if (company.financial_year) {
+      localStorage.setItem("selectedFinancialYear", company.financial_year);
+    }
+    window.location.href = "/";
   };
 
   return (
