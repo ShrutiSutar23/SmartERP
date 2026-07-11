@@ -1,3 +1,128 @@
+# SmartERP — Business Management System
+
+A full-stack ERP (Enterprise Resource Planning) system built from scratch, inspired by Tally software. SmartERP helps businesses manage their accounts, inventory, sales, purchases, and reports — all from one place.
+
+## 🌐 Live Demo
+
+- **Frontend (Live App):** https://smart-erp-wine-eta.vercel.app
+- **Backend API:** https://smarterp-q4x1.onrender.com
+
+## 👩‍💻 Built By
+
+**Shruti Sutar**
+Non-technical student | Built this project from scratch over 5 weeks
+
+---
+
+## 📌 What is SmartERP?
+
+SmartERP is a web-based accounting and inventory management system similar to Tally. It allows business owners to:
+
+- Manage multiple companies from one account
+- Track customers and suppliers (Ledgers)
+- Manage stock items with HSN codes, units, and GST
+- Record sales and purchase transactions
+- Track payment status (Cash, UPI, Bank Transfer, Card)
+- Auto-generate PDF invoices
+- View real-time business reports
+- Navigate using keyboard shortcuts (like Tally)
+
+---
+
+## 🗂️ Project Structure
+
+SmartERP/
+│
+├── backend/                          # Python Flask Backend
+│   ├── app.py                        # Main Flask application entry point
+│   ├── models.py                     # Database table definitions (9 tables)
+│   ├── routes.py                     # All API routes (15+ endpoints)
+│   ├── extensions.py                 # Database extension (SQLAlchemy)
+│   ├── invoice_generator.py          # PDF invoice generation (ReportLab)
+│   ├── requirements.txt              # Python dependencies
+│   ├── Procfile                      # Render deployment config
+│   └── .env                          # Environment variables (not in GitHub)
+│
+├── frontend/                         # Next.js React Frontend
+│   ├── app/
+│   │   ├── page.js                   # Gateway screen (main menu)
+│   │   ├── layout.js                 # Root layout
+│   │   ├── config.js                 # API URL configuration
+│   │   ├── globals.css               # Global styles
+│   │   ├── login/page.js             # Login page
+│   │   ├── signup/page.js            # Signup page
+│   │   ├── companies/page.js         # Company selection
+│   │   ├── ledgers/page.js           # Customer & Supplier ledgers
+│   │   ├── items/page.js             # Stock items management
+│   │   ├── units/page.js             # Units of measure
+│   │   ├── sales/page.js             # Sales voucher
+│   │   ├── purchases/page.js         # Purchase voucher
+│   │   ├── payment/page.js           # Payment voucher
+│   │   ├── receipt/page.js           # Receipt voucher
+│   │   ├── journal/page.js           # Journal voucher
+│   │   ├── contra/page.js            # Contra voucher
+│   │   ├── vouchers/page.js          # All vouchers combined
+│   │   ├── stock-summary/page.js     # Stock summary (Inwards/Outwards)
+│   │   └── reports/page.js           # Business reports
+│   │
+│   ├── app/components/
+│   │   ├── AppLayout.js              # Main layout wrapper
+│   │   ├── KeyboardShortcuts.js      # Global keyboard navigation
+│   │   └── ShortcutPanel.js          # Tally-style shortcut sidebar
+│   │
+│   ├── next.config.js                # Next.js configuration
+│   └── package.json                  # Node.js dependencies
+│
+└── README.md                         # This file
+
+---
+
+## 🛠️ Tech Stack
+
+### Backend
+| Technology | Purpose |
+|---|---|
+| Python 3.12 | Programming language |
+| Flask | Web framework |
+| SQLAlchemy | Database ORM |
+| PostgreSQL (Supabase) | Cloud database |
+| Flask-JWT-Extended | Authentication (JWT tokens) |
+| ReportLab | PDF invoice generation |
+| Gunicorn | Production server |
+| Flask-CORS | Cross-origin requests |
+
+### Frontend
+| Technology | Purpose |
+|---|---|
+| Next.js 16 | React framework |
+| React 19 | UI library |
+| Tailwind CSS | Styling |
+| JavaScript | Programming language |
+
+### Deployment
+| Service | What it hosts |
+|---|---|
+| Supabase | PostgreSQL database (cloud) |
+| Render | Flask backend API |
+| Vercel | Next.js frontend |
+| GitHub | Source code & version control |
+
+---
+
+## 🗄️ Database Structure
+
+The application uses **9 database tables**:
+user          → Stores login credentials
+company       → Business companies (up to 5 per user)
+customer      → Customer ledgers (debtors)
+supplier      → Supplier ledgers (creditors)
+item          → Stock items with HSN, units, prices
+sale          → Sales transactions
+purchase      → Purchase transactions
+voucher       → Payment, Receipt, Journal, Contra vouchers
+unit          → Units of measurement (KG, Ltr, PCS etc.)
+
+
 ---
 
 ## ⌨️ Keyboard Shortcuts (Tally-Style)
